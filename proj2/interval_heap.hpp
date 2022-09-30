@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <vector>
 #include <ranges>
@@ -222,7 +223,7 @@ private:
 			}
 		}
 		// Then reinsert the points
-		for (ptrdiff_t parent = (len >> 1) - ((len + 1) >> 1 & 1) - 1; parent >= 0; --parent) {
+		for (ptrdiff_t parent = ((len + 2) >> 2 << 1) - 1; parent >= 0; --parent) {
 			value_type value = std::move(m_data[parent]);
 			if (parent & 1) {
 				_adjust_heap(parent, std::move(value), std::less());
