@@ -5,6 +5,8 @@
 #include <memory>
 
 
+/// @brief ifstream with buffer
+/// @tparam T Value type
 template <class T>
 class ifbufstream {
 	using value_type = T;
@@ -17,12 +19,22 @@ public:
 		open(path);
 	}
 
+	/// @brief Opens an external file.
+	/// @param path Path of a file.
 	void open(std::filesystem::path path) {
 		m_stream.open(path, std::ios_base::in | std::ios_base::binary);
 		m_pos = buffer_size;
 		seek(0);
 	}
 
+	/// @brief Close the file. 
+	void close() {
+		m_stream.close();
+	}
+
+	/// @brief Changing the current read position, and set pos of EOF.
+	/// @param first A file offset object.
+	/// @param last Offset as end of file.
 	void seek(std::streampos first, std::streampos last = -1) {
 		m_first = m_spos = first;
 		if (last < 0) {
@@ -34,10 +46,18 @@ public:
 		m_stream.seekg(m_spos * value_size);
 	}
 
+	/// @brief Get the current read position, in number of elements.
+	size_t tellg() { return m_stream.tellg() / value_size; }
+
+	/// @brief Load data from file to buffer.
 	void load() {
 		m_stream.read(reinterpret_cast<char*>(m_buf.get()), buffer_size * value_size);
 		m_pos = 0;
 	}
+
+	/// @brief Get size of file span.
+	/// @return 
+	size_t size() const { return m_last - m_first; }
 
 	ifbufstream& operator>> (value_type& x) {
 		if (m_pos == buffer_size) load();
@@ -46,20 +66,23 @@ public:
 		return *this;
 	}
 
+	/// @brief Whether the file is read complete.
 	operator bool() const { return m_spos != m_last; }
 
 private:
 
 	size_t buffer_size;
 	std::ifstream m_stream;
-	std::unique_ptr<value_type[]> m_buf;
-	size_t m_pos;
-	std::streampos m_first;
-	std::streampos m_last;
-	std::streampos m_spos;
+	std::unique_ptr<value_type[]> m_buf; // Buffer array
+	size_t m_pos;			// Current pos of buffer
+	std::streampos m_first;	// First element pos of file span
+	std::streampos m_last;	// Last element pos of file span
+	std::streampos m_spos;	// Current element pos of file span
 };
 
 
+/// @brief Iterator for ifbufstream
+/// @tparam T Value type
 template <class T>
 class ifbuf_iterator {
 public:
@@ -94,7 +117,8 @@ private:
 };
 
 
-
+/// @brief ofstream with buffer
+/// @tparam T Value type
 template <class T>
 class ofbufstream {
 	using value_type = T;
@@ -107,17 +131,30 @@ public:
 		open(path);
 	}
 
+	/// @brief Opens an external file.
+	/// @param path Path of a file.
 	void open(std::filesystem::path path) {
 		m_stream.open(path, std::ios_base::out | std::ios_base::binary);
 		m_pos = 0;
 		seek(0);
 	}
 
+	/// @brief Close the file. 
+	void close() {
+		m_stream.close();
+	}
+
+	/// @brief Changing the current write position, in number of elements.
+	/// @param first 
 	void seek(std::streampos first) {
 		m_first = m_spos = first;
 		m_stream.seekp(m_spos * value_size);
 	}
 
+	/// @brief Getting the current write position, in number of elements.
+	size_t tellp() { return m_stream.tellp() / value_size; }
+
+	/// @brief Write all data in buffer to file.
 	void dump() {
 		m_stream.write(reinterpret_cast<char*>(m_buf.get()), m_pos * value_size);
 		m_pos = 0;
@@ -134,13 +171,15 @@ private:
 
 	size_t buffer_size;
 	std::ofstream m_stream;
-	std::unique_ptr<value_type[]> m_buf;
-	size_t m_pos;
-	std::streampos m_first;
-	std::streampos m_spos;
+	std::unique_ptr<value_type[]> m_buf; // Buffer array
+	size_t m_pos;			// Current pos of buffer
+	std::streampos m_first;	// First element pos of file span
+	std::streampos m_spos;	// Current element pos of file span
 };
 
 
+/// @brief Iterator for ofbufstream
+/// @tparam T Value type
 template <class T>
 class ofbuf_iterator {
 public:
