@@ -6,7 +6,8 @@
 
 /// @brief External sorting implemented by merge sort
 /// @tparam T Value type of sorted file
-template <class T>
+/// @tparam multithread Whether use multithread io. Default is false.
+template <class T, bool multithread = false>
 class external_merge_sorter {
 	using value_type = T;
 
@@ -26,13 +27,14 @@ public:
 		output_buf.open(output_path);
 		size_t tot_size = input_buf1.size();
 		auto tmp = std::make_unique<value_type[]>(buffer_size);
+		// 如果要用线程优化？只能是双缓冲区
 		for (size_t i = 0; i < tot_size; i += buffer_size) {
 			size_t n = std::min(tot_size - i, buffer_size);
 			std::copy_n(ifbuf_iterator(input_buf1), n, tmp.get());
 			std::stable_sort(tmp.get(), tmp.get() + n);
 			std::copy_n(tmp.get(), n, ofbuf_iterator(output_buf));
 		}
-		output_buf.dump(); // Dump rest data in buffer to file
+		//output_buf.dump(); // Dump rest data in buffer to file
 		input_buf1.close();
 		output_buf.close();
 		// Merge run
@@ -49,8 +51,8 @@ public:
 				input_buf1.seek(i, i + len);
 				input_buf2.seek(i + len, std::min(i + len2, tot_size));
 				std::merge(
-					ifbuf_iterator(input_buf1), ifbuf_iterator<value_type>(),
-					ifbuf_iterator(input_buf2), ifbuf_iterator<value_type>(),
+					ifbuf_iterator(input_buf1), ifbuf_iterator<value_type, multithread>(),
+					ifbuf_iterator(input_buf2), ifbuf_iterator<value_type, multithread>(),
 					ofbuf_iterator(output_buf)
 				);
 			}
@@ -59,7 +61,7 @@ public:
 				input_buf1.seek(i, tot_size);
 				std::copy_n(ifbuf_iterator(input_buf1), tot_size - i, ofbuf_iterator(output_buf));
 			}
-			output_buf.dump(); // Dump rest data in buffer to file
+			//output_buf.dump(); // Dump rest data in buffer to file
 			input_buf1.close();
 			input_buf2.close();
 			output_buf.close();
@@ -95,7 +97,7 @@ private:
 
 private:
 	size_t buffer_size;
-	ifbufstream<T> input_buf1;
-	ifbufstream<T> input_buf2;
-	ofbufstream<T> output_buf;
+	ifbufstream<T, multithread> input_buf1;
+	ifbufstream<T, multithread> input_buf2;
+	ofbufstream<T, multithread> output_buf;
 };

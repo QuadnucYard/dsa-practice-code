@@ -3,11 +3,13 @@
 #include <iostream>
 #include <filesystem>
 #include <memory>
+#include <future>
 
 
 /// @brief ifstream with buffer
 /// @tparam T Value type
-template <class T>
+/// @tparam multithread Whether use multithread io. Default is false.
+template <class T, bool multithread = false>
 class ifbufstream {
 	using value_type = T;
 	constexpr static size_t value_size = sizeof(T);
@@ -44,25 +46,24 @@ public:
 			m_last = last;
 		}
 		m_stream.seekg(m_spos * value_size);
+		if constexpr (multithread) aload();
 	}
 
 	/// @brief Get the current read position, in number of elements.
 	size_t tellg() { return m_stream.tellg() / value_size; }
-
-	/// @brief Load data from file to buffer.
-	void load() {
-		m_stream.read(reinterpret_cast<char*>(m_buf.get()), buffer_size * value_size);
-		m_pos = 0;
-	}
 
 	/// @brief Get size of file span.
 	/// @return 
 	size_t size() const { return m_last - m_first; }
 
 	ifbufstream& operator>> (value_type& x) {
-		if (m_pos == buffer_size) load();
+		if constexpr (multithread) {
+			if (!m_ready) m_bufuture.get();
+		} else if (m_pos == buffer_size) load();
 		x = m_buf[m_pos++];
 		m_spos += 1;
+		if constexpr (multithread)
+			if (m_pos == buffer_size && m_spos < m_last) aload();
 		return *this;
 	}
 
@@ -71,6 +72,18 @@ public:
 
 private:
 
+	/// @brief Load data from file to buffer.
+	void load() {
+		m_stream.read(reinterpret_cast<char*>(m_buf.get()), buffer_size * value_size);
+		m_pos = 0;
+		if constexpr (multithread) m_ready = true;
+	}
+
+	void aload() {
+		m_ready = false;
+		m_bufuture = std::async(std::launch::async, &ifbufstream<value_type, multithread>::load, this);
+	}
+
 	size_t buffer_size;
 	std::ifstream m_stream;
 	std::unique_ptr<value_type[]> m_buf; // Buffer array
@@ -78,12 +91,14 @@ private:
 	std::streampos m_first;	// First element pos of file span
 	std::streampos m_last;	// Last element pos of file span
 	std::streampos m_spos;	// Current element pos of file span
+	std::future<void> m_bufuture;
+	std::atomic_bool m_ready{ false };
 };
 
 
 /// @brief Iterator for ifbufstream
 /// @tparam T Value type
-template <class T>
+template <class T, bool multithread = false>
 class ifbuf_iterator {
 public:
 	using iterator_category = std::input_iterator_tag;
@@ -92,7 +107,7 @@ public:
 	using pointer = const value_type*;
 	using reference = const value_type&;
 
-	using stream_type = ifbufstream<value_type>;
+	using stream_type = ifbufstream<value_type, multithread>;
 
 	ifbuf_iterator() : end_marker(false) {}
 	ifbuf_iterator(stream_type& s) : stream(&s) { read(); }
@@ -119,7 +134,8 @@ private:
 
 /// @brief ofstream with buffer
 /// @tparam T Value type
-template <class T>
+/// @tparam multithread Whether use multithread io. Default is false.
+template <class T, bool multithread = false>
 class ofbufstream {
 	using value_type = T;
 	constexpr static size_t value_size = sizeof(T);
@@ -141,6 +157,9 @@ public:
 
 	/// @brief Close the file. 
 	void close() {
+		if constexpr (multithread)
+			if (!m_ready) m_bufuture.get();
+			else dump();
 		m_stream.close();
 	}
 
@@ -154,20 +173,31 @@ public:
 	/// @brief Getting the current write position, in number of elements.
 	size_t tellp() { return m_stream.tellp() / value_size; }
 
-	/// @brief Write all data in buffer to file.
-	void dump() {
-		m_stream.write(reinterpret_cast<char*>(m_buf.get()), m_pos * value_size);
-		m_pos = 0;
-	}
-
 	ofbufstream& operator<< (const value_type& x) {
+		if constexpr (multithread)
+			if (!m_ready) m_bufuture.get();
 		m_buf[m_pos++] = x;
 		m_spos += 1;
-		if (m_pos == buffer_size) dump();
+		if (m_pos == buffer_size) {
+			if constexpr (multithread) adump();
+			else dump();
+		}
 		return *this;
 	}
 
 private:
+
+	/// @brief Write all data in buffer to file.
+	void dump() {
+		m_stream.write(reinterpret_cast<char*>(m_buf.get()), m_pos * value_size);
+		m_pos = 0;
+		if constexpr (multithread) m_ready = true;
+	}
+
+	void adump() {
+		m_ready = false;
+		m_bufuture = std::async(std::launch::async, &ofbufstream<value_type, multithread>::dump, this);
+	}
 
 	size_t buffer_size;
 	std::ofstream m_stream;
@@ -175,12 +205,14 @@ private:
 	size_t m_pos;			// Current pos of buffer
 	std::streampos m_first;	// First element pos of file span
 	std::streampos m_spos;	// Current element pos of file span
+	std::future<void> m_bufuture;
+	std::atomic_bool m_ready{ true };
 };
 
 
 /// @brief Iterator for ofbufstream
 /// @tparam T Value type
-template <class T>
+template <class T, bool multithread = false>
 class ofbuf_iterator {
 public:
 	using iterator_category = std::output_iterator_tag;
@@ -189,7 +221,7 @@ public:
 	using pointer = void;
 	using reference = void;
 
-	using stream_type = ofbufstream<T>;
+	using stream_type = ofbufstream<T, multithread>;
 
 	ofbuf_iterator(stream_type& s) : stream(&s) {}
 
