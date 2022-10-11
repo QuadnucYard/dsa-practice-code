@@ -1,40 +1,17 @@
 #pragma once
-#include <array>
-#include <iostream>
+#include <vector>
 #include <algorithm>
-#include <ranges>
 
 /// @brief A Loser Tree for external merge sort.
 /// @tparam _Tp Value type.
 /// @tparam _Nm Number of elements.
-template <class _Tp, size_t _Nm>
+template <class _Tp>
 class loser_tree {
 	using value_type = _Tp;
 
 public:
 	/// @brief Construct empty tree by default. 
-	loser_tree() {
-		std::ranges::fill(m_tree, 0);
-	}
-
-	/// @brief Construct tree from iterator. The size of range should not less than _Nm.
-	/// @tparam InputIt Input iterator type.
-	/// @param first First iterator.
-	/// @param last Last iterator.
-	template <typename InputIt>
-	loser_tree(InputIt first, InputIt last) : loser_tree(std::ranges::subrange(first, last)) {}
-
-	/// @brief Construct tree from range. The size of range should not less than _Nm.
-	/// @tparam _Range Input range type.
-	/// @param _r Input range.
-	template <std::ranges::input_range _Range>
-	loser_tree(_Range&& _r) : loser_tree() {
-		ptrdiff_t i = _Nm;
-		for (auto&& x : _r) {
-			push_at({ 1, x }, --i);
-			if (i == 0) break;
-		}
-	}
+	loser_tree(size_t size) : m_tree(size, 0), m_data(size, value_type{}) {}
 
 	/// @brief Get the top element.
 	/// @return The top element.
@@ -53,8 +30,13 @@ public:
 	/// @param i Position.
 	void push_at(const value_type& value, size_t i) {
 		m_data[i] = value;
-		adjust((i + _Nm) >> 1, i); // Adjust from parent
+		adjust((i + m_data.size()) >> 1, i); // Adjust from parent
 	}
+
+	size_t size() const { return m_data.size(); }
+
+	auto begin() const { return m_data.begin(); }
+	auto end() const { return m_data.end(); }
 
 private:
 	/// @brief Maintain the loser tree.
@@ -62,7 +44,8 @@ private:
 	/// @param winner Upcoming winner index.
 	void adjust(size_t i, size_t winner) {
 		for (; i > 0; i >>= 1) {
-			if (m_data[m_tree[i]] < m_data[winner]) { // 上来的胜者是败者
+			// If the upcoming winner is current loser, just swap.
+			if (m_data[m_tree[i]] < m_data[winner]) {
 				std::swap(m_tree[i], winner);
 			}
 		}
@@ -70,6 +53,6 @@ private:
 	}
 
 private:
-	std::array<size_t, _Nm> m_tree;			// Loser/Winner indices in the tree.
-	std::array<value_type, _Nm> m_data;		// Stored data.
+	std::vector<size_t> m_tree;			// Loser/Winner indices in the tree.
+	std::vector<value_type> m_data;		// Stored data.
 };
