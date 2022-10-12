@@ -18,7 +18,7 @@ public:
 	/// @brief Opens an external file.
 	/// @param path Path of a file.
 	void open(const std::filesystem::path& path) {
-		m_stream.open(path, std::ios_base::out | std::ios_base::binary);
+		m_stream.open(path, std::ios_base::binary);
 		seek(0);
 	}
 
@@ -102,7 +102,6 @@ public:
 	inline async_ofbufstream& operator<< (const value_type& x) override {
 		base::operator<<(x);
 		if (this->m_pos == this->buffer_size) {
-			if (m_bufuture.valid()) m_bufuture.get();
 			swap_buffer();
 			adump();
 		}
@@ -119,6 +118,7 @@ private:
 
 	/// @brief Swap two buffers.
 	inline void swap_buffer() {
+		if (m_bufuture.valid()) m_bufuture.get();
 		std::swap(this->m_buf, m_buf2);
 		this->m_pos = 0;
 	}

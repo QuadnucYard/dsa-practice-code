@@ -22,7 +22,7 @@ public:
 		if (!fs::exists(path)) {
 			throw std::runtime_error("File not found: " + path.string());
 		}
-		m_stream.open(path, std::ios_base::in | std::ios_base::binary);
+		m_stream.open(path, std::ios_base::binary);
 		if (!m_stream.is_open()) {
 			throw std::runtime_error("Fail to open input file.");
 		}
@@ -131,7 +131,6 @@ public:
 	inline async_ifbufstream& operator>> (value_type& x) {
 		if (this->m_spos == -1) this->seek(0);
 		if (this->m_pos == this->buffer_size) {
-			m_bufuture.get();
 			swap_buffer();
 			aload();
 		}
@@ -150,6 +149,7 @@ private:
 
 	/// @brief Swap two buffers.
 	inline void swap_buffer() {
+		m_bufuture.get();
 		std::swap(this->m_buf, m_buf2);
 		this->m_pos = 0;
 	}
