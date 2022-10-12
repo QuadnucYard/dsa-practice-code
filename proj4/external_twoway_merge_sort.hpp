@@ -53,18 +53,16 @@ private:
 	void repsel_sort() {
 		// Suppose the file contains more elements than buffer size.
 		// It can use buffer featuring both input and output.
-		ifbufstream<value_type, double_buffer_tag> input_buf(buffer_size, input_path);
-		ofbufstream<value_type, double_buffer_tag> output_buf(buffer_size, get_merge_file(0));
-		input_buf.seek(0);
+		async_iofbufstream<value_type> iobuf(buffer_size, input_path, get_merge_file(0));
 		// Build loser tree, and insert elements reversely.
 		loser_tree<std::pair<int, value_type>> lt(buffer_size);
 		for (ssize_t i = buffer_size - 1; i >= 0; i--) {
-			if (!input_buf) { // If input data is not enough, supplement with virtual segs.
+			if (iobuf.ieof()) { // If input data is not enough, supplement with virtual segs.
 				lt.push_at({ 2, 0 }, i);
 				continue;
 			}
 			value_type x;
-			input_buf >> x;
+			iobuf >> x;
 			lt.push_at({ 1, x }, i);
 		}
 		// Get merge segments.
@@ -73,13 +71,13 @@ private:
 			size_t cnt = 0;
 			while (lt.top().first == rc) { // While there still exists a record belonging to this round.
 				int minimax = lt.top().second;
-				if (!input_buf) {
+				if (iobuf.ieof()) {
 					// When input EOF, add a virtual record in rmax+1 seg.
 					lt.push({ rmax + 1, 0 });
 				} else {
 					// The input is not empty, then read in the next record.
 					value_type x;
-					input_buf >> x;
+					iobuf >> x;
 					if (x < minimax) {
 						// If the new record is less than the minimal element in the last round, it belongs to the next round.
 						rmax = rc + 1;
@@ -90,7 +88,7 @@ private:
 					}
 				}
 				// Output the minimax and increment counter. 
-				output_buf << minimax;
+				iobuf << minimax;
 				cnt++;
 			}
 			rc = lt.top().first; // Update rc. In fact, it just increment rc by 1.
