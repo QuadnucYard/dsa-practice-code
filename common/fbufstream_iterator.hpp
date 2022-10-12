@@ -1,7 +1,9 @@
 #pragma once
 #include "fbufstream.hpp"
 #include <iterator>
+#include <thread>
 
+class ifbufstream_sentinel {};
 
 /// @brief Iterator for ifbufstream
 /// @tparam T Value type
@@ -17,24 +19,26 @@ public:
 	using stream_type = base_ifbufstream<T>;
 	using self = ifbufstream_iterator<T>;
 
-	ifbufstream_iterator() : end_marker(false), has_value(false) {}
-	ifbufstream_iterator(stream_type& s) : self() { stream = &s; }
+	ifbufstream_iterator() : stream(nullptr), end_marker(false) {}
+	ifbufstream_iterator(stream_type& s) : stream(&s) { read(); }
 
-	inline reference operator* () { if (!has_value) read(); return value; }
-	inline reference operator-> () { return &*this; }
+	inline reference operator* () const { return value; }
+	inline reference operator-> () const { return &*this; }
 
-	inline self& operator++ () { has_value = false; return *this; }
+	inline self& operator++ () { read(); return *this; }
+	inline self operator++ (int) { auto tmp = *this; read(); return tmp; }
 
-	inline bool operator== (const self& o) { return end_marker == o.end_marker; }
+	inline bool operator== (const ifbufstream_sentinel& o) { return !end_marker; }
+	inline bool operator== (const ifbufstream_iterator& o) { return !end_marker; }
 
 private:
 	stream_type* stream;
 	value_type value;
-	bool has_value;
 	bool end_marker;
-	void read() {
+
+	inline void read() {
 		end_marker = (bool)*stream;
-		if (end_marker) *stream >> value, has_value = true;
+		if (end_marker) *stream >> value;
 	}
 };
 
