@@ -1,6 +1,7 @@
 #pragma once
 #include "fbuf.hpp"
 #include <future>
+#include <atomic>
 
 
 /// @brief A special fstream using only 3 buffers for I/O. 
@@ -118,7 +119,7 @@ private:
 	/// @brief Current element pos of file span. -1 indicates that it hasn't been loaded.
 	std::streamoff m_ispos;
 	/// @brief Current size of input file.
-	std::streamsize m_isize;
+	std::atomic<std::streamsize> m_isize;
 	/// @brief The istream.
 	std::ifstream m_istream;
 	/// @brief The ostream.
@@ -134,5 +135,5 @@ private:
 	/// @brief Future for async writing.
 	std::future<void> m_ofut;
 	/// @brief Mark whether inpout eof.
-	bool m_ieof;
+	std::atomic<bool> m_ieof;
 };
