@@ -1,13 +1,13 @@
+#include "../common/fbufstream.hpp"
+#include "../common/fbufstream_iterator.hpp"
 #include <algorithm>
-#include <filesystem>
 #include <cassert>
-#include "fbufstream.hpp"
 
 
 /// @brief External sorting implemented by merge sort
 /// @tparam T Value type of sorted file
 /// @tparam multithread Whether use multithread io. Default is false.
-template <class T, bool multithread = false>
+template <class T>
 class external_merge_sorter {
 	using value_type = T;
 
@@ -15,53 +15,51 @@ public:
 	/// @brief Constructor
 	/// @param buffer_size Size of buffer elements.
 	external_merge_sorter(size_t buffer_size) : buffer_size(buffer_size),
-		input_buf1(buffer_size), input_buf2(buffer_size), output_buf(buffer_size * 2) {}
+		input_buf1(buffer_size), input_buf2(buffer_size), output_buf(buffer_size) {}
 
 	/// @brief Sort array in binary file.
 	/// @param input_path Path of input file.
 	/// @param output_path Path of output file.
-	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
-		namespace fs = std::filesystem;
+	void operator()(const fs::path& input_path, const fs::path& output_path) {
 		// Sort run: Sort all data by block
 		input_buf1.open(input_path);
 		output_buf.open(output_path);
+		input_buf1.seek(0);
 		size_t tot_size = input_buf1.size();
-		auto tmp = std::make_unique<value_type[]>(buffer_size);
-		// 如果要用线程优化？只能是双缓冲区
+		std::vector<value_type> tmp(buffer_size);
 		for (size_t i = 0; i < tot_size; i += buffer_size) {
 			size_t n = std::min(tot_size - i, buffer_size);
-			std::copy_n(ifbuf_iterator(input_buf1), n, tmp.get());
-			std::stable_sort(tmp.get(), tmp.get() + n);
-			std::copy_n(tmp.get(), n, ofbuf_iterator(output_buf));
+			std::copy_n(ifbufstream_iterator(input_buf1), n, tmp.begin());
+			std::stable_sort(tmp.begin(), tmp.begin() + n);
+			std::copy_n(tmp.begin(), n, ofbufstream_iterator(output_buf));
 		}
-		//output_buf.dump(); // Dump rest data in buffer to file
 		input_buf1.close();
 		output_buf.close();
+
 		// Merge run
+
 		fs::path pA = output_path, pB = output_path; // merge A to B
 		pB.replace_filename(".tmp");
-		for (size_t len = buffer_size; len < tot_size; len <<= 1) { // 输出段长度
-			input_buf1.open(pA);
-			input_buf2.open(pA);
+		// To keep continuity, let buf2 read from middle.
+		for (size_t len = buffer_size; len < tot_size; len <<= 1) { // Length of each input way.
+			size_t half = (tot_size + len - 1) / (len << 1) * len; // Middle position.
+			input_buf1.open(pA), input_buf2.open(pA);
 			output_buf.open(pB);
-			output_buf.seek(0);
-			size_t i = 0;
-			for (; i + len < tot_size; i += len << 1) { // Pos of merged block 
-				size_t len2 = len << 1;
+			input_buf1.seek(0, half), input_buf2.seek(half);
+			for (size_t i = 0; i < half; i += len) {
 				input_buf1.seek(i, i + len);
-				input_buf2.seek(i + len, std::min(i + len2, tot_size));
+				input_buf2.seek(i + half, std::min(i + half + len, tot_size));
 				std::merge(
-					ifbuf_iterator(input_buf1), ifbuf_iterator<value_type, multithread>(),
-					ifbuf_iterator(input_buf2), ifbuf_iterator<value_type, multithread>(),
-					ofbuf_iterator(output_buf)
+					ifbufstream_iterator(input_buf1), ifbufstream_iterator<value_type>(),
+					ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(),
+					ofbufstream_iterator(output_buf)
 				);
 			}
 			// Move rest data to output file if any
-			if (i < tot_size) {
-				input_buf1.seek(i, tot_size);
-				std::copy_n(ifbuf_iterator(input_buf1), tot_size - i, ofbuf_iterator(output_buf));
+			if (half * 2 < tot_size) {
+				input_buf2.seek(half * 2, tot_size);
+				std::copy(ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(), ofbufstream_iterator(output_buf));
 			}
-			//output_buf.dump(); // Dump rest data in buffer to file
 			input_buf1.close();
 			input_buf2.close();
 			output_buf.close();
@@ -97,7 +95,7 @@ private:
 
 private:
 	size_t buffer_size;
-	ifbufstream<T, multithread> input_buf1;
-	ifbufstream<T, multithread> input_buf2;
-	ofbufstream<T, multithread> output_buf;
+	ifbufstream<value_type, basic_buffer_tag> input_buf1;
+	ifbufstream<value_type, basic_buffer_tag> input_buf2;
+	ofbufstream<value_type, basic_buffer_tag> output_buf;
 };
