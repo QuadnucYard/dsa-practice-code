@@ -1,4 +1,5 @@
 #include <chrono>
+#include <iostream>
 
 /// @brief Timer the function.
 /// @param __fn The function.

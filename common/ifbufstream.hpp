@@ -37,7 +37,6 @@ public:
 	/// @param first A file offset object.
 	/// @param last Offset as end of file.
 	virtual void seek(std::streamoff first, std::streamoff last = -1) {
-		this->m_first = this->m_spos = first;
 		if (last < 0) {
 			m_stream.clear(); // In case the stream has encountered EOF.
 			m_stream.seekg(0, std::ios_base::end);
@@ -45,8 +44,11 @@ public:
 		} else {
 			m_last = last;
 		}
-		m_stream.seekg(this->m_spos * this->value_size, std::ios_base::beg);
-		this->m_pos = this->buffer_size;
+		if (this->m_spos != first) {
+			this->m_first = this->m_spos = first;
+			m_stream.seekg(this->m_spos * this->value_size, std::ios_base::beg);
+			this->m_pos = this->buffer_size;
+		}
 	}
 
 	/// @brief Get the current read position, in number of elements.
@@ -123,9 +125,13 @@ public:
 	/// @param first A file offset object.
 	/// @param last Offset as end of file.
 	void seek(std::streamoff first, std::streamoff last = -1) override {
-		base::seek(first, last);
-		this->load();
-		if (!this->m_stream.eof()) aload();
+		if (this->m_spos != first) {
+			base::seek(first, last);
+			this->load();
+			if (!this->m_stream.eof()) aload();
+		} else {
+			this->m_last = last;
+		}
 	}
 
 	inline async_ifbufstream& operator>> (value_type& x) {
