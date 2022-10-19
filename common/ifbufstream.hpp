@@ -15,7 +15,7 @@ public:
 
 	using base::base;
 	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ifbufstream(buffer_size) { open(path); }
-
+	base_ifbufstream(const base_ifbufstream& o) : base_ifbufstream(o.buffer_size) {}
 	~base_ifbufstream() { close(); }
 
 	/// @brief Opens an external file.
@@ -60,6 +60,11 @@ public:
 		else return -1;
 	}
 
+	/// @brief Get whether file span is end.
+	inline bool eof() {
+		return m_stream.eof() || tellg() >= m_last;
+	}
+
 	/// @brief Get size of file span.
 	/// @return Span size.
 	inline std::streamsize size() const { return this->m_last - this->m_first; }
@@ -74,6 +79,14 @@ public:
 
 	/// @brief Whether the file is read complete.
 	inline operator bool() const { return this->m_spos != this->m_last; }
+
+	/// @brief Read one element.
+	/// @return Element value.
+	inline value_type get() {
+		value_type x;
+		*this >> x;
+		return x;
+	}
 
 protected:
 
