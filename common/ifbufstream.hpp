@@ -10,8 +10,10 @@ class base_ifbufstream : public fbuf<T> {
 
 public:
 	using value_type = T;
+	using base = fbuf<T>;
+	using base::buffer_type;
 
-	base_ifbufstream(size_t buffer_size) : fbuf<T>(buffer_size) {}
+	using base::base;
 	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ifbufstream(buffer_size) { open(path); }
 
 	~base_ifbufstream() { close(); }
@@ -62,6 +64,8 @@ public:
 	/// @return Span size.
 	inline std::streamsize size() const { return this->m_last - this->m_first; }
 
+	inline const value_type& back() const { return this->m_buf.back(); }
+
 	inline virtual base_ifbufstream& operator>> (value_type& x) {
 		x = this->m_buf[this->m_pos++];
 		this->m_spos++;
@@ -96,8 +100,7 @@ public:
 	using value_type = T;
 	using base = base_ifbufstream<T>;
 
-	basic_ifbufstream(size_t buffer_size) : base(buffer_size) {}
-	basic_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base(buffer_size, path) {}
+	using base::base;
 
 	inline basic_ifbufstream& operator>> (value_type& x) override {
 		if (this->m_spos == -1) this->seek(0);
@@ -118,8 +121,10 @@ class async_ifbufstream : public base_ifbufstream<T> {
 public:
 	using value_type = T;
 	using base = base_ifbufstream<T>;
+
 	async_ifbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
 	async_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base(buffer_size, path), m_buf2(buffer_size) {}
+	async_ifbufstream(const async_ifbufstream& o) : async_ifbufstream(o.buffer_size) {}
 
 	/// @brief Changing the current read position, and set pos of EOF. It will result in buffer reload.
 	/// @param first A file offset object.
