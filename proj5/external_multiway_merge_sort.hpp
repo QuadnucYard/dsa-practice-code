@@ -7,9 +7,10 @@
 /// @tparam T Value type.
 template <class T>
 class external_multiway_merge_sorter {
-	using value_type = T;
 
 public:
+	using value_type = T;
+
 	external_multiway_merge_sorter(size_t buffer_size) : buffer_size(buffer_size) {}
 
 	void operator()(const fs::path& input_path, const fs::path& output_path) {
@@ -58,6 +59,8 @@ public:
 				lt.push({ 1, {}, i });
 			}
 		}
+		output_buf.close();
+		fs::remove(tmp_path);
 	}
 
 	void operator()(const fs::path& input_path, const fs::path& output_path, int x) {

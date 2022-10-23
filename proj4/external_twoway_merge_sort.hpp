@@ -3,14 +3,18 @@
 #include "../common/fbufstream_iterator.hpp"
 #include <algorithm>
 #include <queue>
+#include "../common/futils.hpp"
 
 
 /// @brief External twoway merge sort implementation.
 /// @tparam T Value type.
 template <class T>
 class external_twoway_merge_sorter {
+	
+public:
 	using value_type = T;
 
+private:
 	/// @brief File segment with offset, pos, and file index.
 	struct file_segment {
 		size_t size;	// Segment length
@@ -28,6 +32,7 @@ class external_twoway_merge_sorter {
 	};
 
 public:
+
 	external_twoway_merge_sorter(size_t buffer_size) : buffer_size(buffer_size) {}
 
 	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
@@ -70,7 +75,7 @@ private:
 			if (s2.index != 0) fs::remove(get_merge_file(s2.index));
 		}
 		// Finalize.
-		fs::remove(get_merge_file(0)); // Remove the initial merge file.
+		if (n > 1) fs::remove(get_merge_file(0)); // Remove the initial merge file.
 		fs::rename(get_merge_file(n - 1), output_path); // Rename the last file to output file.
 		best_merge_sequence = std::move(merge_seq);
 	}

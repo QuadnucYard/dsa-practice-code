@@ -9,9 +9,10 @@
 /// @tparam multithread Whether use multithread io. Default is false.
 template <class T>
 class external_merge_sorter {
-	using value_type = T;
 
 public:
+	using value_type = T;
+
 	/// @brief Constructor
 	/// @param buffer_size Size of buffer elements.
 	external_merge_sorter(size_t buffer_size) : buffer_size(buffer_size),
