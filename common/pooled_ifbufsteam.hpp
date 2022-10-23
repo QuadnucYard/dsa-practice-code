@@ -51,6 +51,7 @@ private:
 
 	/// @brief Swap two buffers.
 	inline void swap_buffer() {
+		if (!this->m_buf.empty()) throw std::logic_error("It should be empty!");
 		std::swap(this->m_buf, m_buf_queue.front());
 		m_buf_queue.pop_front();
 		if (m_buf_queue.empty()) {
@@ -78,6 +79,12 @@ public:
 	ifbufstream_pool(size_t buffer_count, size_t buffer_size) :
 		m_bufs(buffer_count, stream_type{ buffer_size }) {}
 
+	~ifbufstream_pool() { close(); }
+
+	void close() {
+		for (auto&& buf : m_bufs) buf.close();
+	}
+
 	/// @brief Get buffer stream by subscript.
 	/// @param index Index of buffer stream.
 	/// @return The stream.
@@ -88,7 +95,7 @@ public:
 	/// @brief Collect empty buffers, and allocate buffers as needed.
 	void collect_allocate() {
 		// Collect empty buffers.
-		for (int i = 0; i < m_bufs.size(); i++) {
+		for (size_t i = 0; i < m_bufs.size(); i++) {
 			if (!m_bufs[i].m_buf.empty()) {
 				m_free_bufs.push_back(std::move(m_bufs[i].m_buf));
 			}

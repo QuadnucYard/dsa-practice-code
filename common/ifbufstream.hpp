@@ -31,7 +31,8 @@ public:
 	}
 
 	/// @brief Close the file. 
-	void close() {
+	void close() override {
+		base::close();
 		m_stream.close();
 	}
 
@@ -39,8 +40,8 @@ public:
 	/// @param first A file offset object.
 	/// @param last Offset as end of file.
 	virtual void seek(std::streamoff first, std::streamoff last = -1) {
+		m_stream.clear(); // In case the stream has encountered EOF.
 		if (last < 0) {
-			m_stream.clear(); // In case the stream has encountered EOF.
 			m_stream.seekg(0, std::ios_base::end);
 			m_last = m_stream.tellg() / this->value_size + last + 1;
 		} else {

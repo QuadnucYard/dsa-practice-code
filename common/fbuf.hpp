@@ -22,6 +22,8 @@ public:
 
 	fbuf(size_t buffer_size) : buffer_size(buffer_size), m_buf(buffer_size), m_pos(0), m_first(0), m_spos(-1) {}
 
+	virtual void close() { m_spos = -1; }
+
 protected:
 	/// @brief Buffer size.
 	size_t buffer_size;
