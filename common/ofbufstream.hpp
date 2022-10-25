@@ -1,5 +1,6 @@
 #pragma once
 #include "fbuf.hpp"
+#include "shared_file.hpp"
 #include <future>
 
 
@@ -11,35 +12,31 @@ public:
 	using value_type = T;
 
 	base_ofbufstream(size_t buffer_size) : fbuf<T>(buffer_size) {}
-	base_ofbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ofbufstream(buffer_size) { open(path); }
+	base_ofbufstream(size_t buffer_size, shared_ofile& file) : base_ofbufstream(buffer_size) { open(file); }
 
 	~base_ofbufstream() { close(); }
 
 	/// @brief Opens an external file.
 	/// @param path Path of a file.
-	void open(const std::filesystem::path& path) {
-		m_stream.open(path, std::ios_base::binary);
+	void open(shared_ofile& file) {
+		m_stream = &file;
 		seek(0);
 	}
 
 	/// @brief Close the file. 
 	virtual void close() {
 		dump();
-		m_stream.close();
 	}
 
 	/// @brief Changing the current write position, in number of elements.
 	/// @param first 
-	void seek(std::streamoff first) {
+	inline void seek(std::streamoff first) {
 		this->m_first = this->m_spos = first;
-		m_stream.seekp(this->m_spos * this->value_size, std::ios_base::beg);
 	}
 
 	/// @brief Getting the current write position, in number of elements.
-	std::streamoff tellp() {
-		std::streamoff t = m_stream.tellp();
-		if (t != -1) return t / this->value_size;
-		else return -1;
+	inline std::streamoff tellp() {
+		return this->m_spos;
 	}
 
 	inline virtual base_ofbufstream& operator<< (const value_type& x) {
@@ -52,12 +49,12 @@ protected:
 
 	/// @brief Write all data in buffer to file.
 	inline void dump() {
-		m_stream.write(reinterpret_cast<char*>(this->m_buf.data()), this->m_pos * this->value_size);
+		m_stream->write(this->m_buf, this->m_spos - this->m_pos, this->m_pos);
 		this->m_pos = 0;
 	}
 
 	/// @brief The output file stream.
-	std::ofstream m_stream;
+	shared_ofile* m_stream;
 };
 
 
@@ -70,8 +67,7 @@ public:
 	using value_type = T;
 	using base = base_ofbufstream<T>;
 
-	basic_ofbufstream(size_t buffer_size) : base(buffer_size) {}
-	basic_ofbufstream(size_t buffer_size, const std::filesystem::path& path) : base(buffer_size, path) {}
+	using base::base;
 
 	inline basic_ofbufstream& operator<< (const value_type& x) override {
 		base::operator<<(x);
@@ -91,8 +87,7 @@ public:
 	using value_type = T;
 	using base = base_ofbufstream<T>;
 
-	async_ofbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
-	async_ofbufstream(size_t buffer_size, const std::filesystem::path& path) : base(buffer_size, path), m_buf2(buffer_size) {}
+	using base::base;
 
 	void close() override {
 		if (m_bufuture.valid()) m_bufuture.get();

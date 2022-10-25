@@ -1,5 +1,6 @@
 #pragma once
 #include "fbuf.hpp"
+#include "shared_file.hpp"
 #include <future>
 
 
@@ -14,56 +15,39 @@ public:
 	using base::buffer_type;
 
 	using base::base;
-	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ifbufstream(buffer_size) { open(path); }
+	base_ifbufstream(size_t buffer_size, shared_ifile& file) : base_ifbufstream(buffer_size) { open(file); }
 	base_ifbufstream(const base_ifbufstream& o) : base_ifbufstream(o.buffer_size) {}
-	~base_ifbufstream() { close(); }
 
 	/// @brief Opens an external file.
-	/// @param path Path of a file.
-	void open(const std::filesystem::path& path) {
-		if (!fs::exists(path)) {
-			throw std::runtime_error("File not found: " + path.string());
-		}
-		m_stream.open(path, std::ios_base::binary);
-		if (!m_stream.is_open()) {
-			throw std::runtime_error("Fail to open input file.");
-		}
-	}
-
-	/// @brief Close the file. 
-	void close() override {
-		base::close();
-		m_stream.close();
+	/// @param file Shared file object.
+	void open(shared_ifile& file) {
+		m_stream = &file;
+		this->m_spos = -1;
 	}
 
 	/// @brief Changing the current read position, and set pos of EOF. It won't reload the block immediately.
 	/// @param first A file offset object.
 	/// @param last Offset as end of file.
 	virtual void seek(std::streamoff first, std::streamoff last = -1) {
-		m_stream.clear(); // In case the stream has encountered EOF.
 		if (last < 0) {
-			m_stream.seekg(0, std::ios_base::end);
-			m_last = m_stream.tellg() / this->value_size + last + 1;
+			m_last = m_stream->file_size() / this->value_size + last + 1;
 		} else {
 			m_last = last;
 		}
 		if (this->m_spos != first) {
 			this->m_first = this->m_spos = first;
-			m_stream.seekg(this->m_spos * this->value_size, std::ios_base::beg);
 			this->m_pos = this->buffer_size;
 		}
 	}
 
 	/// @brief Get the current read position, in number of elements.
-	std::streamoff tellg() {
-		std::streamoff t = m_stream.tellg();
-		if (t != -1) return t / this->value_size;
-		else return -1;
+	inline std::streamoff tellg() {
+		return this->m_spos;
 	}
 
 	/// @brief Get whether file span is end.
 	inline bool eof() {
-		return m_stream.eof() || tellg() >= m_last;
+		return m_stream->eof() || this->m_spos >= m_last;
 	}
 
 	/// @brief Get size of file span.
@@ -93,12 +77,12 @@ protected:
 
 	/// @brief Load data from file to buffer.
 	inline virtual void load() {
-		m_stream.read(reinterpret_cast<char*>(this->m_buf.data()), this->m_buf.size() * this->value_size);
+		m_stream->read(this->m_buf, this->m_spos);
 		this->m_pos = 0;
 	}
 
 	/// @brief The input file stream.
-	std::ifstream m_stream;
+	shared_ifile* m_stream;
 	/// @brief Last element pos of file span.
 	std::streamoff m_last;
 
@@ -136,9 +120,7 @@ public:
 	using value_type = T;
 	using base = base_ifbufstream<T>;
 
-	async_ifbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
-	async_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base(buffer_size, path), m_buf2(buffer_size) {}
-	async_ifbufstream(const async_ifbufstream& o) : async_ifbufstream(o.buffer_size) {}
+	using base::base;
 
 	/// @brief Changing the current read position, and set pos of EOF. It will result in buffer reload.
 	/// @param first A file offset object.
@@ -167,8 +149,8 @@ private:
 
 	/// @brief Load data to background buffer.
 	inline void aload() {
-		m_bufuture = std::async(std::launch::async, [this]() {
-			this->m_stream.read(reinterpret_cast<char*>(this->m_buf2.data()), this->m_buf2.size() * this->value_size);
+		m_bufuture = std::async(std::launch::async, [this, offset = this->m_spos]() {
+			this->m_stream->read(this->m_buf2, offset);
 			});
 	}
 

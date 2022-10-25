@@ -120,7 +120,7 @@ public:
 			m_bufuture = std::async(std::launch::async, [this, p]() {
 				auto&& loading_buf = p->m_buf_queue.back();
 				auto siz = std::min(p->m_last - p->m_spos, (ptrdiff_t)loading_buf.size());
-				p->m_stream.read(reinterpret_cast<char*>(loading_buf.data()), siz * p->value_size);
+				p->m_stream->read(loading_buf, siz);
 				});
 		}
 	}
