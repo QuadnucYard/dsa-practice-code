@@ -1,4 +1,5 @@
-#include "../common/fbufstream.hpp"
+#pragma once
+#include "../common/base_sorter.hpp"
 #include "../common/fbufstream_iterator.hpp"
 #include <algorithm>
 #include <cassert>
@@ -8,14 +9,14 @@
 /// @tparam T Value type of sorted file
 /// @tparam multithread Whether use multithread io. Default is false.
 template <class T>
-class external_merge_sorter {
+class external_merge_sorter : public base_sorter {
 
 public:
 	using value_type = T;
 
 	/// @brief Constructor
 	/// @param buffer_size Size of buffer elements.
-	external_merge_sorter(size_t buffer_size) : buffer_size(buffer_size),
+	external_merge_sorter(size_t buffer_size) : base_sorter(buffer_size),
 		input_buf1(buffer_size), input_buf2(buffer_size), output_buf(buffer_size) {}
 
 	/// @brief Sort array in binary file.
@@ -95,7 +96,6 @@ private:
 #endif
 
 private:
-	size_t buffer_size;
 	ifbufstream<value_type, basic_buffer_tag> input_buf1;
 	ifbufstream<value_type, basic_buffer_tag> input_buf2;
 	ofbufstream<value_type, basic_buffer_tag> output_buf;

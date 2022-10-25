@@ -1,17 +1,17 @@
 #pragma once
+#include "../common/base_sorter.hpp"
 #include "../proj4/replacement_selection.hpp"
-#include "../common/fbufstream_iterator.hpp"
 #include "../common/pooled_ifbufsteam.hpp"
 
 /// @brief External multi-way merge sort implementation.
 /// @tparam T Value type.
 template <class T>
-class external_multiway_merge_sorter {
+class external_multiway_merge_sorter : public base_sorter {
 
 public:
 	using value_type = T;
 
-	external_multiway_merge_sorter(size_t buffer_size) : buffer_size(buffer_size) {}
+	using base_sorter::base_sorter;
 
 	void operator()(const fs::path& input_path, const fs::path& output_path) {
 		auto tmp_path = output_path;
@@ -34,10 +34,10 @@ public:
 		pool.collect_allocate(); // Maybe this is important
 
 		// Loser tree. The 0-th of each element marks whether it is virtual.
-		loser_tree<std::tuple<bool, value_type, int>> lt(merge_order);
+		loser_tree<std::tuple<int, value_type, int>> lt(merge_order);
 		// Initialize loser tree
 		for (ssize_t i = merge_order - 1; i >= 0; i--) {
-			lt.push_at({ 0, pool[i].get(), i }, i);
+			lt.push_at({ 1, pool[i].get(), i }, i);
 		}
 		// Continuously select the minimal element and output it.
 		size_t st = 0;
@@ -48,18 +48,18 @@ public:
 				st = 0;
 			}
 			auto [b, x, i] = lt.top();
-			if (b) break; // It indicates that the merge is completed. Then end loop.
+			if (b == 2) break; // It indicates that the merge is completed. Then end loop.
 			output_buf << x; // Output.
 			if (pool[i]) {
 				// If this file is not exhausted, read in next value and push.
 				pool[i] >> x;
-				lt.push({ 0, x, i });
+				lt.push({ 1, x, i });
 			} else {
 				// Else push a virtual record. The value can be arbitrary.
-				lt.push({ 1, {}, i });
+				lt.push({ 2, {}, i });
 			}
 		}
-		output_buf.close();
+		pool.close();
 		fs::remove(tmp_path);
 	}
 
@@ -106,8 +106,6 @@ public:
 	}
 
 private:
-	/// @brief Size of all buffers.
-	size_t buffer_size;
 	/// @brief Length of segments to be merged.
 	std::vector<size_t> segments;
 };

@@ -1,34 +1,33 @@
 #pragma GCC optimize(3)
 #include <iostream>
-#include "tester.hpp"
+#include "judge.hpp"
 #include "../proj2/external_quick_sort.hpp"
 #include "../proj3/external_merge_sort.hpp"
 #include "../proj4/external_twoway_merge_sort.hpp"
 #include "../proj5/external_multiway_merge_sort.hpp"
 
+struct judge_impl {
+	judge J;
+	std::vector<size_t> buffer_sizes{ /*1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14,1 << 15,*/ 1 << 16, 1 << 17, 1 << 18, 1 << 19, 1 << 20 };
+	fs::path result_path{ "test/data/result.csv" };
+
+	judge_impl() {
+		J.init();
+	}
+
+	template <class T>
+	void test() {
+		for (size_t s : buffer_sizes) {
+			J.test_sort(external_merge_sorter<T>(s));
+			J.test_sort(external_twoway_merge_sorter<T>(s));
+			J.test_sort(external_multiway_merge_sorter<T>(s));
+			J.dump_result(result_path);
+		}
+	}
+};
+
 int main() {
-	tester tst;
-	tst.init();
-	// tst.test_sort(external_quick_sorter<int>(1 << 16));
-	// tst.test_sort(external_twoway_merge_sorter<int>(1 << 8)); // 太慢，而且有大量临时文件
-	// tst.test_sort(external_merge_sorter<int>(1 << 16));
-	// tst.test_sort(external_merge_sorter<int>(1 << 18));
-	// tst.test_sort(external_merge_sorter<int>(1 << 14));
-	// tst.test_sort(external_twoway_merge_sorter<int>(1 << 14));
-	// tst.test_sort(external_twoway_merge_sorter<int>(1 << 16));
-	// tst.test_sort(external_twoway_merge_sorter<int>(1 << 18));
-	// tst.test_sort(external_twoway_merge_sorter<int>(1 << 20));
-	// tst.test_sort(external_twoway_merge_sorter<float>(1 << 16)); WA
-	// tst.test_sort(external_twoway_merge_sorter<double>(1 << 16)); WA
-	tst.test_sort(external_merge_sorter<int>(1 << 8));
-	tst.test_sort(external_merge_sorter<int>(1 << 16));
-	// tst.test_sort(external_merge_sorter<float>(1 << 8));
-	// tst.test_sort(external_merge_sorter<float>(1 << 16));
-	tst.test_sort(external_multiway_merge_sorter<int>(1 << 10));
-	tst.test_sort(external_multiway_merge_sorter<int>(1 << 12));
-	tst.test_sort(external_multiway_merge_sorter<int>(1 << 14));
-	tst.test_sort(external_multiway_merge_sorter<int>(1 << 16));
-	tst.test_sort(external_multiway_merge_sorter<int>(1 << 18));
-	tst.test_sort(external_multiway_merge_sorter<int>(1 << 20));
+	judge_impl J;
+	J.test<int>();
 	return 0;
 }

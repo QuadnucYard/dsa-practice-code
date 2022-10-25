@@ -1,4 +1,5 @@
 #pragma once
+#include "../common/base_sorter.hpp"
 #include "replacement_selection.hpp"
 #include "../common/fbufstream_iterator.hpp"
 #include <algorithm>
@@ -9,7 +10,7 @@
 /// @brief External twoway merge sort implementation.
 /// @tparam T Value type.
 template <class T>
-class external_twoway_merge_sorter {
+class external_twoway_merge_sorter : public base_sorter {
 	
 public:
 	using value_type = T;
@@ -33,7 +34,7 @@ private:
 
 public:
 
-	external_twoway_merge_sorter(size_t buffer_size) : buffer_size(buffer_size) {}
+	using base_sorter::base_sorter;
 
 	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
 		this->input_path = input_path;
@@ -98,8 +99,6 @@ private:
 	}
 
 private:
-	/// @brief Size of all buffers.
-	size_t buffer_size;
 	/// @brief Path of input file.
 	fs::path input_path;
 	/// @brief Path of output file.

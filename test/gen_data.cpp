@@ -52,12 +52,12 @@ int main() {
 	tester::init();
 	//std::vector<int> sizes{ 10'000, 100'000, 1'000'000, 5'000'000, 10'000'000 };
 	std::vector<int> sizes{ 100000, 200000, 500000, 800000, 1000000, 1500000, 2000000 };
-	const int seed = 114514;
+	const int seed = time(0);
 	for (int i = 0; i < sizes.size(); i++) {
-		generate_limit_data<int8_t>(sizes[i], seed, fmt::format("arr_i8_{}", i));
-		generate_limit_data<int16_t>(sizes[i], seed, fmt::format("arr_i16_{}", i));
+		// generate_limit_data<int8_t>(sizes[i], seed, fmt::format("arr_i8_{}", i));
+		// generate_limit_data<int16_t>(sizes[i], seed, fmt::format("arr_i16_{}", i));
 		generate_limit_data<int32_t>(sizes[i], seed, fmt::format("arr_i32_{}", i));
-		generate_limit_data<int64_t>(sizes[i], seed, fmt::format("arr_i64_{}", i));
+		// generate_limit_data<int64_t>(sizes[i], seed, fmt::format("arr_i64_{}", i));
 		// generate_limit_data<float>(sizes[i], seed, fmt::format("arr_f32_{}", i));
 		// generate_limit_data<double>(sizes[i], seed, fmt::format("arr_f64_{}", i));
 	}
