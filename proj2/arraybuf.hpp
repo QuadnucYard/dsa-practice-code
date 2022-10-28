@@ -4,12 +4,14 @@
 /// @brief A file buffer specialized for value type.
 /// @tparam T Value type
 /// @tparam buffer_size Size of buffer elements.
-template <class T, size_t buffer_size>
+template <class T>
 class arraybuf {
 
 	constexpr static size_t value_size = sizeof(T); // Size of value type
 
 public:
+	arraybuf(size_t buffer_size) : buffer_size(buffer_size), m_buf(buffer_size) {}
+
 	/// @brief Bind a file stream object.
 	/// @param stream A file stream object.
 	inline void bind(std::fstream* stream) {
@@ -65,14 +67,14 @@ public:
 	inline void load(std::streampos pos, std::streamsize input_size) {
 		auto tmp_pos = m_stream->tellp(); // Save write pos because load will change it
 		m_stream->seekg(pos * value_size, m_stream->beg);
-		m_stream->read(reinterpret_cast<char*>(m_buf), input_size * value_size);
+		m_stream->read(reinterpret_cast<char*>(m_buf.data()), input_size * value_size);
 		m_stream->seekp(tmp_pos); // Recover write pos
 		m_size = input_size;
 	}
 
 	/// @brief Dump buffer data to file
 	inline void dump() {
-		m_stream->write(reinterpret_cast<const char*>(m_buf), m_size * value_size);
+		m_stream->write(reinterpret_cast<const char*>(m_buf.data()), m_size * value_size);
 		m_size = 0;
 	}
 
@@ -81,7 +83,7 @@ public:
 	inline void transfer(std::fstream* other) {
 		size_t total_size = tellp();
 		m_stream->seekg(m_stream->beg);
-		char* buf = reinterpret_cast<char*>(m_buf);
+		char* buf = reinterpret_cast<char*>(m_buf.data());
 		while (total_size > 0) {
 			std::streamsize input_size = std::min(buffer_size, total_size);
 			m_stream->read(buf, input_size * value_size);
@@ -91,9 +93,9 @@ public:
 		m_size = 0;
 	}
 
-	inline const T* begin() const { return m_buf; }
+	inline const T* begin() const { return m_buf.data(); }
 
-	inline const T* end() const { return m_buf + m_size; }
+	inline const T* end() const { return m_buf.data() + m_size; }
 
 	/// @brief Get buffer size
 	/// @return Buffer size
@@ -104,7 +106,8 @@ public:
 	inline const std::fstream* stream() const { return m_stream; }
 
 private:
+	size_t buffer_size;
 	std::fstream* m_stream; // File stream
-	T m_buf[buffer_size]; 	// Buffer array
+	std::vector<T> m_buf; 	// Buffer array
 	size_t m_size; 			// Filled size
 };

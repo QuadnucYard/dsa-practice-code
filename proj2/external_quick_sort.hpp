@@ -1,5 +1,5 @@
 #pragma once
-#include <filesystem>
+#include "../common/base_sorter.hpp"
 #include <cassert>
 #include <algorithm>
 #include "interval_heap.hpp"
@@ -8,31 +8,34 @@
 /// @brief External sorting implemented by quick sort
 /// @tparam T Value type of sorted file
 /// @tparam buffer_size Buffer size, aka number of buffer elements
-template <class T, size_t buffer_size>
-class external_quick_sorter {
+template <class T>
+class external_quick_sorter : public base_sorter {
 
-	using buffer_type = arraybuf<T, buffer_size>;
+	using buffer_type = arraybuf<T>;
 
 	constexpr static size_t value_size = sizeof(T);
 
 public:
+	using value_type = T;
+
 	/// @brief Constructor
 	/// @param tmp_path Path of temporary file.
-	external_quick_sorter(const std::filesystem::path& tmp_path) : m_tmp_path(tmp_path) {
-		ftemp.open(tmp_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
-	}
+	external_quick_sorter(size_t buffer_size) : base_sorter(buffer_size),
+		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size) {}
 
 	~external_quick_sorter() {
-		ftemp.close();
 		// Remove temporary file
-		std::filesystem::remove(m_tmp_path);
+		fs::remove(m_tmp_path);
 	}
 
 	/// @brief Sort array in binary file.
 	/// @param input_path Path of input file.
 	/// @param output_path Path of output file.
-	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
+	void operator()(const fs::path& input_path, const fs::path& output_path) {
 		// Open file
+		fs::path tmp_path = output_path;
+		tmp_path.replace_filename(".quicksort");
+		ftemp.open(tmp_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
 		finput.open(input_path, std::ios_base::binary | std::ios_base::in);
 		foutput.open(output_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
 		// Bind buffer to stream
