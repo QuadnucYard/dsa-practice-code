@@ -37,18 +37,11 @@ public:
 		}
 #endif
 		m_path = path;
-	}
-
-	inline bool eof() const {
-#ifdef CFILE
-		return feof(m_file);
-#else
-		return m_file.eof();
-#endif
+		m_size = fs::file_size(m_path);
 	}
 
 	inline uintmax_t file_size() const {
-		return fs::file_size(m_path);
+		return m_size;
 	}
 
 	template <class T>
@@ -68,6 +61,7 @@ public:
 
 private:
 	fs::path m_path;
+	uintmax_t m_size;
 #ifdef CFILE
 	FILE* m_file;
 #else
@@ -80,7 +74,7 @@ private:
 class shared_ofile {
 public:
 	shared_ofile() = default;
-	shared_ofile(const fs::path& path) { open(path); }
+	shared_ofile(const fs::path& path, bool trunc = true) { open(path, trunc); }
 
 	~shared_ofile() { close(); }
 
@@ -92,18 +86,19 @@ public:
 #endif
 	}
 
-	void open(const fs::path& path) {
+	void open(const fs::path& path, bool trunc = true) {
 #ifdef CFILE
-		m_file = fopen(path.string().c_str(), "wb");
+		m_file = fopen(path.string().c_str(), trunc ? "wb" : "rb+");
 		if (!m_file) {
 			throw std::runtime_error("Fail to open output file.");
 		}
 #else
-		m_file.open(path, std::ios_base::binary);
+		m_file.open(path, trunc ? std::ios_base::binary | std::ios_base::trunc : std::ios_base::binary);
 		if (!m_file.is_open()) {
 			throw std::runtime_error("Fail to open output file.");
 		}
 #endif
+		m_path = path;
 	}
 
 	template <class T>
@@ -119,6 +114,7 @@ public:
 	}
 
 private:
+	fs::path m_path;
 #ifdef CFILE
 	FILE* m_file;
 #else

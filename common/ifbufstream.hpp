@@ -38,6 +38,7 @@ public:
 			this->m_first = this->m_spos = first;
 			this->m_pos = this->buffer_size;
 		}
+		this->m_fpos = first;
 	}
 
 	/// @brief Get the current read position, in number of elements.
@@ -47,7 +48,7 @@ public:
 
 	/// @brief Get whether file span is end.
 	inline bool eof() {
-		return m_stream->eof() || this->m_spos >= m_last;
+		return this->m_fpos >= m_stream->file_size() / this->value_size || this->m_spos >= m_last;
 	}
 
 	/// @brief Get size of file span.
@@ -77,7 +78,7 @@ protected:
 
 	/// @brief Load data from file to buffer.
 	inline virtual void load() {
-		m_stream->read(this->m_buf, this->m_spos);
+		this->m_fpos += m_stream->read(this->m_buf, this->m_fpos);
 		this->m_pos = 0;
 	}
 
@@ -120,7 +121,9 @@ public:
 	using value_type = T;
 	using base = base_ifbufstream<T>;
 
-	using base::base;
+	async_ifbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
+	async_ifbufstream(size_t buffer_size, shared_ifile& file) : base(buffer_size, file), m_buf2(buffer_size) {}
+	async_ifbufstream(const async_ifbufstream& o) : base(o.buffer_size), m_buf2(o.buffer_size) {}
 
 	/// @brief Changing the current read position, and set pos of EOF. It will result in buffer reload.
 	/// @param first A file offset object.
@@ -129,8 +132,9 @@ public:
 		if (this->m_spos != first) {
 			base::seek(first, last);
 			this->load();
-			if (!this->m_stream.eof()) aload();
+			if (!this->eof()) aload();
 		} else {
+			this->m_fpos = first;
 			this->m_last = last;
 		}
 	}
@@ -139,7 +143,7 @@ public:
 		if (this->m_spos == -1) this->seek(0);
 		if (this->m_pos == this->buffer_size) {
 			swap_buffer();
-			aload();
+			if (!this->eof()) aload();
 		}
 		base::operator>>(x);
 		return *this;
@@ -149,14 +153,14 @@ private:
 
 	/// @brief Load data to background buffer.
 	inline void aload() {
-		m_bufuture = std::async(std::launch::async, [this, offset = this->m_spos]() {
-			this->m_stream->read(this->m_buf2, offset);
+		m_bufuture = std::async(std::launch::async, [this, offset = this->m_fpos]() {
+			return this->m_stream->read(this->m_buf2, offset);
 			});
 	}
 
 	/// @brief Swap two buffers.
 	inline void swap_buffer() {
-		m_bufuture.get();
+		this->m_fpos += m_bufuture.get();
 		std::swap(this->m_buf, m_buf2);
 		this->m_pos = 0;
 	}
@@ -164,7 +168,7 @@ private:
 	/// @brief Background buffer
 	std::vector<value_type> m_buf2;
 	/// @brief Future for background reading.
-	std::future<void> m_bufuture;
+	std::future<std::streamsize> m_bufuture;
 };
 
 

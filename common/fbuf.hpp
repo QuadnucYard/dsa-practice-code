@@ -31,8 +31,10 @@ protected:
 	size_t m_pos;
 	/// @brief First element pos of file span.
 	std::streamoff m_first;
-	/// @brief Current element pos of file span. -1 indicates that it hasn't been loaded..
+	/// @brief Current element pos of file span. -1 indicates that it hasn't been loaded.
 	std::streamoff m_spos;
+	/// @brief Current i/o end pos of file span.
+	std::streamoff m_fpos;
 	/// @brief  Buffer array.
 	/// It has been tested that vector<T> outperforms unique_ptr<T[]> about 4x without O2, but slightly slower than the latter with O2.
 	buffer_type m_buf;

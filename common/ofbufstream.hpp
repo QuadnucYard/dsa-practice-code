@@ -31,7 +31,7 @@ public:
 	/// @brief Changing the current write position, in number of elements.
 	/// @param first 
 	inline void seek(std::streamoff first) {
-		this->m_first = this->m_spos = first;
+		this->m_first = this->m_spos = this->m_fpos = first;
 	}
 
 	/// @brief Getting the current write position, in number of elements.
@@ -49,7 +49,8 @@ protected:
 
 	/// @brief Write all data in buffer to file.
 	inline void dump() {
-		m_stream->write(this->m_buf, this->m_spos - this->m_pos, this->m_pos);
+		m_stream->write(this->m_buf, this->m_fpos, this->m_pos);
+		this->m_fpos += this->m_pos;
 		this->m_pos = 0;
 	}
 
@@ -87,10 +88,11 @@ public:
 	using value_type = T;
 	using base = base_ofbufstream<T>;
 
-	using base::base;
+	async_ofbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
+	async_ofbufstream(size_t buffer_size, shared_ofile& file) : base(buffer_size, file), m_buf2(buffer_size) {}
 
 	void close() override {
-		if (m_bufuture.valid()) m_bufuture.get();
+		if (m_bufuture.valid()) this->m_fpos += m_bufuture.get();
 		base::close();
 	}
 
@@ -106,14 +108,15 @@ public:
 private:
 	/// @brief Launch async dump.
 	inline void adump() {
-		m_bufuture = std::async(std::launch::async, [this]() {
-			this->m_stream.write(reinterpret_cast<char*>(this->m_buf2.data()), this->m_buf2.size() * this->value_size);
+		m_bufuture = std::async(std::launch::async, [this, size = static_cast<std::streamsize>(this->buffer_size)]() {
+			this->m_stream->write(this->m_buf2, this->m_fpos, size);
+			return size;
 			});
 	}
 
 	/// @brief Swap two buffers.
 	inline void swap_buffer() {
-		if (m_bufuture.valid()) m_bufuture.get();
+		if (m_bufuture.valid()) this->m_fpos += m_bufuture.get();
 		std::swap(this->m_buf, m_buf2);
 		this->m_pos = 0;
 	}
@@ -121,7 +124,7 @@ private:
 	/// @brief Background buffer
 	std::vector<value_type> m_buf2;
 	/// @brief Future for background writing.
-	std::future<void> m_bufuture;
+	std::future<std::streamsize> m_bufuture;
 };
 
 

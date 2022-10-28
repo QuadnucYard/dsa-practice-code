@@ -28,9 +28,9 @@ public:
 	void open(shared_ifile& input_file, shared_ofile& output_file) {
 		m_istream = &input_file;
 		m_ostream = &output_file;
-		m_ispos = m_isize = 0;
+		m_ispos = m_ospos = m_isize = 0;
 		load();
-		if (!m_istream->eof()) aload();
+		if (!this->ieof()) aload();
 	}
 
 	/// @brief Close the stream.
@@ -70,14 +70,14 @@ private:
 	inline virtual void load() {
 		m_isize += m_istream->read(this->m_buf, this->m_ispos);
 		m_ipos = 0;
-		m_ieof = m_istream->eof();
+		//m_ieof = m_istream->eof();
 	}
 
 	/// @brief Load data to background buffer.
 	inline void aload() {
 		m_ifut = std::async(std::launch::async, [this]() {
 			this->m_isize += this->m_istream->read(this->m_ibuf, this->m_ispos);
-			this->m_ieof = this->m_istream->eof();
+			//this->m_ieof = this->m_istream->eof();
 			});
 	}
 
@@ -90,7 +90,7 @@ private:
 
 	/// @brief Write all data in buffer to file.
 	inline void dump() {
-		m_ostream->write(m_buf.data(), m_ospos, this->m_ospos - this->m_opos);
+		m_ostream->write(m_buf, m_ospos, this->m_ospos - this->m_opos);
 		m_opos = 0;
 	}
 
