@@ -10,7 +10,7 @@ class arraybuf {
 	constexpr static size_t value_size = sizeof(T); // Size of value type
 
 public:
-	arraybuf(size_t buffer_size) : buffer_size(buffer_size), m_buf(buffer_size) {}
+	arraybuf(size_t buffer_size, bool backward = false) : buffer_size(buffer_size), m_buf(buffer_size), m_backward(backward) {}
 
 	/// @brief Bind a file stream object.
 	/// @param stream A file stream object.
@@ -74,22 +74,15 @@ public:
 
 	/// @brief Dump buffer data to file
 	inline void dump() {
-		m_stream->write(reinterpret_cast<const char*>(m_buf.data()), m_size * value_size);
-		m_size = 0;
-	}
-
-	/// @brief Transfer all data till write pos to the end of another file
-	/// @param other Output file
-	inline void transfer(std::fstream* other) {
-		size_t total_size = tellp();
-		m_stream->seekg(m_stream->beg);
-		char* buf = reinterpret_cast<char*>(m_buf.data());
-		while (total_size > 0) {
-			std::streamsize input_size = std::min(buffer_size, total_size);
-			m_stream->read(buf, input_size * value_size);
-			other->write(buf, m_stream->gcount());
-			total_size -= input_size;
+		size_t wtsize = m_size * value_size;
+		if (m_backward) {
+			m_stream->seekp(-wtsize, m_stream->cur);
+			m_stream->write(reinterpret_cast<const char*>(m_buf.data()), wtsize);
+			m_stream->seekp(-wtsize, m_stream->cur);
+		} else {
+			m_stream->write(reinterpret_cast<const char*>(m_buf.data()), wtsize);
 		}
+		m_stream->flush();
 		m_size = 0;
 	}
 
@@ -110,4 +103,5 @@ private:
 	std::fstream* m_stream; // File stream
 	std::vector<T> m_buf; 	// Buffer array
 	size_t m_size; 			// Filled size
+	bool m_backward;
 };

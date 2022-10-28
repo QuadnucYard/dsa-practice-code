@@ -21,7 +21,7 @@ public:
 	/// @brief Constructor
 	/// @param tmp_path Path of temporary file.
 	external_quick_sorter(size_t buffer_size) : base_sorter(buffer_size),
-		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size) {}
+		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size, true) {}
 
 	~external_quick_sorter() {
 		// Remove temporary file
@@ -33,18 +33,16 @@ public:
 	/// @param output_path Path of output file.
 	void operator()(const fs::path& input_path, const fs::path& output_path) {
 		// Open file
-		fs::path tmp_path = output_path;
-		tmp_path.replace_filename(".quicksort");
-		ftemp.open(tmp_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+		ftemp.open(output_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
 		finput.open(input_path, std::ios_base::binary | std::ios_base::in);
 		foutput.open(output_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+		// Get input size
+		size_t src_size = fs::file_size(input_path);
+		fs::resize_file(output_path, src_size);
 		// Bind buffer to stream
 		input_buf.bind(&finput);
 		small_buf.bind(&foutput);
 		large_buf.bind(&ftemp);
-		// Get input size
-		finput.seekg(0, finput.end);
-		size_t src_size = finput.tellg();
 		// Perform sorting
 		_sort(0, src_size / value_size, true);
 		// End with closing stream
@@ -58,36 +56,60 @@ private:
 		// Fill middle group
 		size_t input_size = std::min(last - first, buffer_size);
 		input_buf.load(first, input_size);
-		middle_heap = interval_heap<T>(input_buf.begin(), input_buf.end());
+		middle_heap = interval_heap<T>(input_buf.begin(), input_buf.begin() + input_size);
+		//middle_heap.validate();
 		size_t cur = first + input_size;
-		// Now middle group is full. Prepare for IO
-		large_buf.seekp(0);
-		small_buf.seekp(first);
-		// Repeat until read in all input data
-		while (cur < last) {
-			size_t input_size = std::min(last - cur, buffer_size);
+		if (cur < last) { // Read another run to make room for output.
+			input_size = std::min(last - cur, buffer_size);
 			input_buf.load(cur, input_size);
+			for (size_t i = 0; i < input_size; i++) {
+				middle_heap.push(input_buf[i]);
+			}
+			cur += input_size;
+		}
+
+		// Now middle group is full. Prepare for IO
+		large_buf.seekp(last);
+		small_buf.seekp(first);
+		size_t mid1 = first, mid2 = last, cur2 = last;
+		// Repeat until read in all input data
+		// It read data from both sides as needed.
+		while (cur < cur2) {
+			// 这边还要检查是否加载过多
+			if (cur + buffer_size >= cur2 || cur - mid1 <= mid2 - cur2) {
+				input_size = std::min(buffer_size, cur2 - cur);
+				input_buf.load(cur, input_size);
+				cur += input_size;
+			} else {
+				input_size = buffer_size;
+				cur2 -= input_size;
+				input_buf.load(cur2, input_size);
+			}
 			for (size_t i = 0; i < input_size; i++) {
 				T value = input_buf[i];
 				if (value <= middle_heap.top_min()) {
 					small_buf << value;
+					++mid1;
 				} else if (value >= middle_heap.top_max()) {
 					large_buf << value;
+					--mid2;
 				} else {
 					// Replace the minimum element in middle group
 					small_buf << middle_heap.top_min();
+					++mid1;
 					middle_heap.pop_min();
 					middle_heap.push(value);
 				}
+#ifdef DEBUG
+				if (cur != cur2 && (mid1 > cur || mid2 < cur2)) {
+					throw std::logic_error("xxx");
+				}
+#endif
 			}
-			cur += input_size;
 		}
 		// Write back all data in buffer
 		small_buf.dump();
 		large_buf.dump();
-
-		size_t mid1 = small_buf.tellp();
-		size_t mid2 = last - large_buf.tellp();
 
 #ifdef DEBUG
 		assert(first <= mid1);
@@ -101,8 +123,6 @@ private:
 		}
 		small_buf.dump();
 
-		// Concatenate large to middle, the end of output file
-		large_buf.transfer(&foutput);
 #ifdef DEBUG
 		validate(first, mid1, mid2, last);
 #endif
@@ -124,14 +144,16 @@ private:
 		if (!f1) {
 			std::cerr << first << " " << mid1 << " " << mid2 << " " << last << std::endl;
 		}
+		// if (n < 256) {
+		// 	std::cout << "val: ";
+		// 	for (int i = 0; i < mid1 - first; i++) std::cout << a[i] << " ";
+		// 	std::cout << "| ";
+		// 	for (int i = mid1 - first; i < mid2 - first; i++) std::cout << a[i] << " ";
+		// 	std::cout << "| ";
+		// 	for (int i = mid2 - first; i < last - first; i++) std::cout << a[i] << " ";
+		// 	std::cout << "\n";
+		// }
 		assert(f1);
-		// std::cout << "val: ";
-		// for (int i = 0; i < mid1 - first; i++) std::cout << a[i] << " ";
-		// std::cout << "| ";
-		// for (int i = mid1 - first; i < mid2 - first; i++) std::cout << a[i] << " ";
-		// std::cout << "| ";
-		// for (int i = mid2 - first; i < last - first; i++) std::cout << a[i] << " ";
-		// std::cout << "\n";
 		delete[] a;
 	}
 #endif

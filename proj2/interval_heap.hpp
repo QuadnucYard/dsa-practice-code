@@ -25,7 +25,7 @@ public:
 	 * @param il Initialize list
 	 */
 	interval_heap(std::initializer_list<T> il) : m_data(il) {
-		_make_heap();
+		_make_heap_check();
 	}
 
 	/**
@@ -37,7 +37,7 @@ public:
 	 */
 	template <class RandomIt>
 	interval_heap(RandomIt first, RandomIt last) : m_data(first, last) {
-		_make_heap();
+		_make_heap_check();
 	}
 
 	/**
@@ -48,7 +48,7 @@ public:
 	 */
 	template <std::ranges::random_access_range Range>
 	interval_heap(Range r) : m_data(r) {
-		_make_heap();
+		_make_heap_check();
 	}
 
 	/**
@@ -106,19 +106,22 @@ public:
 	 * @param x Value to be pushed
 	 */
 	void push(const_reference x) {
-		size_t i = m_data.size();
-		if ((i & 1) && x < m_data.back()) { // Need swap
-			auto t = std::move(m_data.back());
-			m_data.back() = x;
-			m_data.push_back(std::move(t));
-			i--;
-		} else {
+		size_t i = m_data.size(), parentIndex = parent(i);
+		if (i & 1) { // New value can fill a twin node.
+			if (x < m_data.back()) { // Need swap
+				auto t = std::move(m_data.back());
+				m_data.back() = x;
+				m_data.push_back(std::move(t));
+				i--;
+				_push_heap(i, parentIndex ^ 1, x, std::greater()); // Small
+			} else {
+				m_data.push_back(x);
+				_push_heap(i, parentIndex, x, std::less()); // Large
+			}
+		} else { // If the new node is single, we should discuss which branch it will go.
 			m_data.push_back(x);
-		}
-		if (i & 1) { // Large
-			_push_heap(i, x, std::less());
-		} else { // Small
-			_push_heap(i, x, std::greater());
+			if (x < m_data[parentIndex]) _push_heap(i, parentIndex, x, std::greater()); // Small
+			else if (x > m_data[parentIndex ^ 1]) _push_heap(i, parentIndex ^ 1, x, std::less()); // Large
 		}
 	}
 
@@ -159,9 +162,11 @@ public:
 		// Inclusive relation
 		for (size_t i = 2; i < m_data.size(); i++) {
 			if (i & 1) { // Large
-				assert(!(m_data[parent(i)] < m_data[i]));
+				if (m_data[parent(i)] < m_data[i]) throw std::logic_error("fuck");
+				//assert(!(m_data[parent(i)] < m_data[i]));
 			} else {
-				assert(!(m_data[parent(i)] > m_data[i]));
+				if (m_data[parent(i)] > m_data[i]) throw std::logic_error("fuck");
+				//assert(!(m_data[parent(i)] > m_data[i]));
 			}
 		}
 	}
@@ -173,8 +178,7 @@ private:
 	inline static size_t parent(size_t i) noexcept { return i - (i >> 2 << 1) - 2; }
 
 	template<class Comp>
-	void _push_heap(size_t holeIndex, const_reference value, Comp cmp) {
-		size_t parentIndex = parent(holeIndex);
+	void _push_heap(size_t holeIndex, size_t parentIndex, const_reference value, Comp cmp) {
 		while (holeIndex > 1 && cmp(m_data[parentIndex], value)) {
 			m_data[holeIndex] = std::move(m_data[parentIndex]);
 			holeIndex = parentIndex;
@@ -202,7 +206,7 @@ private:
 
 		}
 		m_data[holeIndex] = std::move(value);
-		if ((holeIndex ^ 1) < len && cmp(value, m_data[holeIndex ^ 1])) {
+		if ((holeIndex ^ 1) < len && cmp(m_data[holeIndex], m_data[holeIndex ^ 1])) {
 			std::swap(m_data[holeIndex], m_data[holeIndex ^ 1]);
 		}
 	}
@@ -212,6 +216,17 @@ private:
 		value_type value = std::move(m_data[resultIndex]);
 		m_data.pop_back();
 		_adjust_heap(topIndex, std::move(value), cmp);
+	}
+
+	void _make_heap_check() {
+		if (m_data.size() & 1) {
+			value_type value = std::move(m_data.back());
+			m_data.pop_back();
+			_make_heap();
+			push(std::move(value));
+		} else {
+			_make_heap();
+		}
 	}
 
 	void _make_heap() {
