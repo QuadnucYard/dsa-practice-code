@@ -2,6 +2,7 @@
 #include "fbuf.hpp"
 #include "shared_file.hpp"
 #include <future>
+#include "futils.hpp"
 
 
 /// @brief Base ofstream with buffer
@@ -10,8 +11,9 @@ template <class T>
 class base_ofbufstream : public fbuf<T> {
 public:
 	using value_type = T;
+	using base = fbuf<T>;
 
-	base_ofbufstream(size_t buffer_size) : fbuf<T>(buffer_size) {}
+	using base::base;
 	base_ofbufstream(size_t buffer_size, shared_ofile& file) : base_ofbufstream(buffer_size) { open(file); }
 
 	~base_ofbufstream() { close(); }
@@ -24,9 +26,7 @@ public:
 	}
 
 	/// @brief Close the file. 
-	virtual void close() {
-		dump();
-	}
+	virtual void close() override { wait(); base::close(); }
 
 	/// @brief Changing the current write position, in number of elements.
 	/// @param first 
@@ -45,10 +45,13 @@ public:
 		return *this;
 	}
 
+	inline virtual void wait() { dump(); }
+
 protected:
 
 	/// @brief Write all data in buffer to file.
 	inline void dump() {
+		fmt::print("wt {} [{},{}]\n", this->m_buf, this->m_fpos, this->m_pos);
 		m_stream->write(this->m_buf, this->m_fpos, this->m_pos);
 		this->m_fpos += this->m_pos;
 		this->m_pos = 0;
@@ -91,11 +94,6 @@ public:
 	async_ofbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
 	async_ofbufstream(size_t buffer_size, shared_ofile& file) : base(buffer_size, file), m_buf2(buffer_size) {}
 
-	void close() override {
-		if (m_bufuture.valid()) this->m_fpos += m_bufuture.get();
-		base::close();
-	}
-
 	inline async_ofbufstream& operator<< (const value_type& x) override {
 		base::operator<<(x);
 		if (this->m_pos == this->buffer_size) {
@@ -103,6 +101,12 @@ public:
 			adump();
 		}
 		return *this;
+	}
+
+	/// @brief Wait all data to be dumped.
+	void wait() {
+		if (m_bufuture.valid()) this->m_fpos += m_bufuture.get();
+		base::wait();
 	}
 
 private:

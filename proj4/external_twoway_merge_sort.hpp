@@ -1,6 +1,6 @@
 #pragma once
-#include "../common/base_sorter.hpp"
 #include "replacement_selection.hpp"
+#include "../common/base_sorter.hpp"
 #include "../common/fbufstream_iterator.hpp"
 #include <algorithm>
 #include <queue>
@@ -20,16 +20,7 @@ private:
 	struct file_segment {
 		size_t size;	// Segment length
 		size_t pos;		// Segment offset
-		size_t index;	// File index
 		bool operator< (const file_segment& o) const { return size > o.size; }
-	};
-
-	/// @brief A struct with 3 buffers for merge run.
-	struct buffer_group {
-		ifbufstream<value_type, basic_buffer_tag> input_buf1;
-		ifbufstream<value_type, basic_buffer_tag> input_buf2;
-		ofbufstream<value_type, basic_buffer_tag> output_buf;
-		buffer_group(size_t buffer_size) : input_buf1(buffer_size), input_buf2(buffer_size), output_buf(buffer_size) {}
 	};
 
 public:
@@ -39,63 +30,60 @@ public:
 	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
 		this->input_path = input_path;
 		this->output_path = output_path;
-		segments = replacement_selection<value_type>(buffer_size)(input_path, get_merge_file(0)); // Call replacement selection
+		segments = replacement_selection<value_type>(buffer_size)(input_path, output_path); // Call replacement selection
 		merge();
 	}
 
 private:
-	/// @brief Get the temporary merge file path by index.
-	/// @param id File index.
-	/// @return Path of merge file.
-	fs::path get_merge_file(size_t id) {
-		auto p = output_path;
-		p.replace_filename(std::string("merge_") + std::to_string(id));
-		return p;
-	}
 
 	/// @brief Merge segments.
 	void merge() {
 		// Get merge order.
 		std::priority_queue<file_segment> ordseg;
-		for (size_t sum = 0; size_t s : segments) {
-			ordseg.push({ s, sum, 0 });
+		size_t sum = 0;
+		for (size_t s : segments) {
+			ordseg.push({ s, sum });
 			sum += s;
-		}
-		// Start merge.
-		buffer_group bufs(buffer_size);
+		}print_binary_file<value_type>(output_path);
+		// Start merge. To reduce number of files, just append all data to the end of output,
+		// and write back to begin in the last merge.
+		shared_ifile input_file(output_path);
+		shared_ofile output_file(output_path, false);
+		ifbufstream<value_type, double_buffer_tag> input_buf1(buffer_size);
+		ifbufstream<value_type, double_buffer_tag> input_buf2(buffer_size);
+		ofbufstream<value_type, double_buffer_tag> output_buf(buffer_size, output_file);
+		output_buf.seek(sum);
+
 		std::vector<std::pair<file_segment, file_segment>> merge_seq;
 		size_t n = ordseg.size();
-		for (size_t i = 1; i < n; i++) {
+		for (size_t i = 1, offset = sum; i < n; i++) {
 			file_segment s1 = ordseg.top(); ordseg.pop();
 			file_segment s2 = ordseg.top(); ordseg.pop();
-			ordseg.push({ s1.size + s2.size, 0, i });
-			merge_run(bufs, i, s1, s2);
+			fmt::print("i={}\n", i);
+			input_buf1.open(input_file); input_buf2.open(input_file);
+			input_buf1.seek(s1.pos, s1.pos + s1.size);
+			input_buf2.seek(s2.pos, s2.pos + s2.size);
+			// 一个严重的问题：  不应有的0被读进来了
+			if (i == n - 1) output_buf.wait(), output_buf.seek(0); // 这里要特别处理一下，
+			//print_binary_file<value_type>(output_path);
+			std::merge(
+				ifbufstream_iterator(input_buf1), ifbufstream_iterator<value_type>(),
+				ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(),
+				ofbufstream_iterator(output_buf)
+			);
+			output_buf.wait();
+			ordseg.push({ s1.size + s2.size, offset });
+			offset += s1.size + s2.size;
 			merge_seq.push_back({ s1, s2 });
-			// Remove used files.
-			if (s1.index != 0) fs::remove(get_merge_file(s1.index));
-			if (s2.index != 0) fs::remove(get_merge_file(s2.index));
+			input_buf1.close();
+			input_buf2.close();
 		}
+		output_buf.close();
+		output_file.close();
 		// Finalize.
-		if (n > 1) fs::remove(get_merge_file(0)); // Remove the initial merge file.
-		fs::rename(get_merge_file(n - 1), output_path); // Rename the last file to output file.
+		print_binary_file<value_type>(output_path);
+		fs::resize_file(output_path, sum * sizeof(value_type));
 		best_merge_sequence = std::move(merge_seq);
-	}
-
-	/// @brief Merge file segments.
-	void merge_run(buffer_group& b, size_t i, const file_segment& s1, const file_segment& s2) {
-		b.input_buf1.open(get_merge_file(s1.index));
-		b.input_buf2.open(get_merge_file(s2.index));
-		b.output_buf.open(get_merge_file(i));
-		b.input_buf1.seek(s1.pos, s1.pos + s1.size);
-		b.input_buf2.seek(s2.pos, s2.pos + s2.size);
-		std::merge(
-			ifbufstream_iterator(b.input_buf1), ifbufstream_iterator<value_type>(),
-			ifbufstream_iterator(b.input_buf2), ifbufstream_iterator<value_type>(),
-			ofbufstream_iterator(b.output_buf)
-		);
-		b.input_buf1.close();
-		b.input_buf2.close();
-		b.output_buf.close();
 	}
 
 private:

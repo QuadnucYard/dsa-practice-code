@@ -93,7 +93,7 @@ public:
 			throw std::runtime_error("Fail to open output file.");
 		}
 #else
-		m_file.open(path, trunc ? std::ios_base::binary | std::ios_base::trunc : std::ios_base::binary);
+		m_file.open(path, trunc ? std::ios_base::binary | std::ios_base::trunc : std::ios_base::binary | std::ios_base::in);
 		if (!m_file.is_open()) {
 			throw std::runtime_error("Fail to open output file.");
 		}

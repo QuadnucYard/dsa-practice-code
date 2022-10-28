@@ -14,12 +14,14 @@ public:
 	replacement_selection(size_t buffer_size) : buffer_size(buffer_size) {}
 
 	std::vector<size_t> operator()(const fs::path& input_path, const fs::path& output_path) {
+		shared_ifile input_file(input_path);
+		shared_ofile output_file(output_path);
 		// It can use buffer featuring both input and output.
-		async_iofbufstream<value_type> iobuf(buffer_size, input_path, output_path);
+		async_iofbufstream<value_type> iobuf(buffer_size, input_file, output_file);
 		// Build loser tree, and insert elements reversely.
 		loser_tree<std::pair<int, value_type>> lt(buffer_size);
 		for (ssize_t i = buffer_size - 1; i >= 0; i--) {
-			if (iobuf.ieof()) { // If input data is not enough, supplement with virtual segs.
+			if (!iobuf) { // If input data is not enough, supplement with virtual segs.
 				lt.push_at({ 2, 0 }, i);
 				continue;
 			}
@@ -33,7 +35,7 @@ public:
 			size_t cnt = 0;
 			while (lt.top().first == rc) { // While there still exists a record belonging to this round.
 				int minimax = lt.top().second;
-				if (iobuf.ieof()) {
+				if (!iobuf) {
 					// When input EOF, add a virtual record in rmax+1 seg.
 					lt.push({ rmax + 1, 0 });
 				} else {

@@ -2,7 +2,7 @@
 #include "fbuf.hpp"
 #include "shared_file.hpp"
 #include <future>
-
+#include "futils.hpp"
 
 /// @brief Base ifstream with buffer.
 /// @tparam T Value type.
@@ -34,11 +34,10 @@ public:
 		} else {
 			m_last = last;
 		}
-		if (this->m_spos != first) {
-			this->m_first = this->m_spos = first;
+		//if (this->m_spos != first) {
+		this->m_first = this->m_spos = this->m_fpos = first;
 			this->m_pos = this->buffer_size;
-		}
-		this->m_fpos = first;
+			//}
 	}
 
 	/// @brief Get the current read position, in number of elements.
@@ -79,6 +78,7 @@ protected:
 	/// @brief Load data from file to buffer.
 	inline virtual void load() {
 		this->m_fpos += m_stream->read(this->m_buf, this->m_fpos);
+		fmt::print("rd {} [{}]\n", this->m_buf, this->m_fpos);
 		this->m_pos = 0;
 	}
 
@@ -129,21 +129,21 @@ public:
 	/// @param first A file offset object.
 	/// @param last Offset as end of file.
 	void seek(std::streamoff first, std::streamoff last = -1) override {
-		if (this->m_spos != first) {
+		//if (this->m_spos != first) {
 			base::seek(first, last);
 			this->load();
-			if (!this->eof()) aload();
-		} else {
-			this->m_fpos = first;
-			this->m_last = last;
-		}
+			aload();
+			//} else {
+			//	this->m_fpos = first;
+			//	this->m_last = last;
+			//}
 	}
 
 	inline async_ifbufstream& operator>> (value_type& x) {
 		if (this->m_spos == -1) this->seek(0);
 		if (this->m_pos == this->buffer_size) {
 			swap_buffer();
-			if (!this->eof()) aload();
+			aload();
 		}
 		base::operator>>(x);
 		return *this;
