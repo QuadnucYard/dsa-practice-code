@@ -7,7 +7,7 @@
 /// @brief A special fstream using only 3 buffers for I/O. 
 /// @tparam T Value type.
 template <class T>
-class async_iofbufstream {
+class async_iofbufstream : public json_log {
 public:
 	using value_type = T;
 	using self = async_iofbufstream<T>;
@@ -15,7 +15,12 @@ public:
 
 	async_iofbufstream(size_t buffer_size) :
 		buffer_size(buffer_size), m_buf(buffer_size), m_ibuf(buffer_size), m_obuf(buffer_size), m_ipos(buffer_size),
-		m_opos(0), m_ispos(-1), m_isize(-1) {}
+		m_opos(0), m_ispos(-1), m_isize(-1) {
+#ifdef LOGGING
+		this->m_log["in"] = 0;
+		this->m_log["out"] = 0;
+#endif
+	}
 	async_iofbufstream(size_t buffer_size, const fs::path& input_path, const fs::path& output_path) : async_iofbufstream(buffer_size) {
 		open(input_path, output_path);
 	}
@@ -70,6 +75,9 @@ private:
 		m_ipos = 0;
 		m_isize += m_istream.gcount() / value_size;
 		m_ieof = m_istream.eof();
+#ifdef LOGGING
+		Json::inc(this->m_log, "in");
+#endif
 	}
 
 	/// @brief Load data to background buffer.
@@ -79,6 +87,9 @@ private:
 			this->m_isize += this->m_istream.gcount() / value_size;
 			this->m_ieof = this->m_istream.eof();
 			});
+#ifdef LOGGING
+		Json::inc(this->m_log, "in");
+#endif
 	}
 
 	/// @brief Swap main buffer with input buffer.
@@ -92,6 +103,9 @@ private:
 	inline void dump() {
 		m_ostream.write(reinterpret_cast<char*>(m_buf.data()), m_opos * value_size);
 		m_opos = 0;
+#ifdef LOGGING
+		Json::inc(this->m_log, "out");
+#endif
 	}
 
 	/// @brief Launch async dump.
@@ -99,6 +113,9 @@ private:
 		m_ofut = std::async(std::launch::async, [this]() {
 			this->m_ostream.write(reinterpret_cast<char*>(this->m_obuf.data()), this->m_obuf.size() * this->value_size);
 			});
+#ifdef LOGGING
+		Json::inc(this->m_log, "out");
+#endif
 	}
 
 	/// @brief Swap main buffer with output buffer.

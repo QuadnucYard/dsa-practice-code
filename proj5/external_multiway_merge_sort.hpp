@@ -16,7 +16,12 @@ public:
 	void operator()(const fs::path& input_path, const fs::path& output_path) {
 		auto tmp_path = output_path;
 		tmp_path.replace_filename(".merge");
-		segments = replacement_selection<value_type>(buffer_size)(input_path, tmp_path); // Call replacement selection
+
+		replacement_selection<value_type> repsel(buffer_size);
+		segments = repsel(input_path, tmp_path); // Call replacement selection
+#ifdef LOGGING
+		m_log["repsel"] = repsel.get_log();
+#endif	
 
 		/// Now merge.
 
@@ -61,6 +66,9 @@ public:
 		}
 		pool.close();
 		fs::remove(tmp_path);
+#ifdef LOGGING
+		m_log["pool"] = pool.get_log();
+#endif
 	}
 
 	void operator()(const fs::path& input_path, const fs::path& output_path, int x) {

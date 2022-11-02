@@ -2,7 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
-
+#include "json_log.hpp"
 
 namespace fs = std::filesystem;
 
@@ -13,7 +13,7 @@ struct double_buffer_tag {};
 /// @brief Base buffer for stream. 
 /// @tparam T Value type.
 template <class T>
-class fbuf {
+class fbuf : public json_log {
 
 public:
 	using value_type = T;

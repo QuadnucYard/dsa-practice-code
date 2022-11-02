@@ -73,6 +73,11 @@ public:
 		} else { // Else rename temp to output
 			fs::rename(pA, pB);
 		}
+#ifdef LOGGING
+		m_log["in1"] = input_buf1.get_log();
+		m_log["in2"] = input_buf2.get_log();
+		m_log["out"] = output_buf.get_log();
+#endif
 	}
 
 private:

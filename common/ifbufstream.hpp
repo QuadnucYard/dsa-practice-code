@@ -13,7 +13,11 @@ public:
 	using base = fbuf<T>;
 	using base::buffer_type;
 
-	using base::base;
+	base_ifbufstream(size_t buffer_size) : base(buffer_size) {
+#ifdef LOGGING
+		this->m_log["in"] = 0;
+#endif
+	}
 	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ifbufstream(buffer_size) { open(path); }
 	base_ifbufstream(const base_ifbufstream& o) : base_ifbufstream(o.buffer_size) {}
 	~base_ifbufstream() { close(); }
@@ -95,6 +99,9 @@ protected:
 	inline virtual void load() {
 		m_stream.read(reinterpret_cast<char*>(this->m_buf.data()), this->m_buf.size() * this->value_size);
 		this->m_pos = 0;
+#ifdef LOGGING
+		Json::inc(this->m_log, "in");
+#endif
 	}
 
 	/// @brief The input file stream.
@@ -170,6 +177,9 @@ private:
 		m_bufuture = std::async(std::launch::async, [this]() {
 			this->m_stream.read(reinterpret_cast<char*>(this->m_buf2.data()), this->m_buf2.size() * this->value_size);
 			});
+#ifdef LOGGING
+		Json::inc(this->m_log, "in");
+#endif
 	}
 
 	/// @brief Swap two buffers.

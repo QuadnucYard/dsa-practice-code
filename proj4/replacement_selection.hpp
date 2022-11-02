@@ -1,4 +1,5 @@
 #pragma once
+#include "../common/base_sorter.hpp"
 #include "../common/fbufstream.hpp"
 #include "../proj4/loser_tree.hpp"
 #include <vector>
@@ -6,12 +7,12 @@
 /// @brief Replacement selection algorithm for external merge sort to produce better initial merge segments.
 /// @tparam T Value type.
 template <class T>
-class replacement_selection {
+class replacement_selection : public base_sorter {
 	using value_type = T;
 
 public:
 
-	replacement_selection(size_t buffer_size) : buffer_size(buffer_size) {}
+	replacement_selection(size_t buffer_size) : base_sorter(buffer_size) {}
 
 	std::vector<size_t> operator()(const fs::path& input_path, const fs::path& output_path) {
 		// It can use buffer featuring both input and output.
@@ -56,9 +57,11 @@ public:
 			rc = lt.top().first; // Update rc. In fact, it just increment rc by 1.
 			seg.push_back(cnt);
 		}
+#ifdef LOGGING
+		m_log["io"] = iobuf.get_log();
+		Json::set_vector(m_log, "seg", seg);
+#endif
 		return seg;
 	}
 
-private:
-	size_t buffer_size;
 };

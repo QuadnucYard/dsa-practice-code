@@ -48,6 +48,11 @@ public:
 		// End with closing stream
 		finput.close();
 		foutput.close();
+#ifdef LOGGING
+		m_log["input"] = input_buf.get_log();
+		m_log["small"] = small_buf.get_log();
+		m_log["large"] = large_buf.get_log();
+#endif
 	}
 
 private:
@@ -128,7 +133,9 @@ private:
 #endif
 		// Rebind input buffer to output file after the first run
 		if (initial) input_buf.bind(&foutput);
-
+#ifdef LOGGING
+		m_log["rec"] = m_log["rec"].asInt() + 1;
+#endif
 		_sort(first, mid1);
 		_sort(mid2, last);
 	}

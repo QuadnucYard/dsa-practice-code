@@ -11,6 +11,7 @@
 #include <future>
 #include <typeinfo>
 #include <expected>
+#include <regex>
 
 namespace fs = std::filesystem;
 
@@ -78,13 +79,17 @@ public:
 			}
 			fmt::print(fmt::fg(print_color), "    Result: {}, {:.3f}ms\n", result_str, tt / 1e6f);
 			total++;
-			csv_str += fmt::format("{},{},{},{},{},{}\n",
+			std::string log = sorter.get_log_str();
+			std::erase(log, '\n');
+			log = std::regex_replace(log, std::regex("\""), "\"\"");
+			csv_str += fmt::format("{},{},{},{},{},{},\"{}\"\n",
 				typeid(Sorter).name(),
 				f.path().stem().string(),
+				fs::file_size(f.path()) / sizeof(typename Sorter::value_type),
 				sorter.get_buffersize(),
 				result_str,
 				tt,
-				sorter.get_log()
+				log
 			);
 		}
 		if (passed == total) {
@@ -127,6 +132,6 @@ private:
 	}
 
 private:
-	std::string csv_str{ "method,data,buffersize,status,time,log\n" };
+	std::string csv_str{ "method,data,data_size,buffer_size,status,time,log\n" };
 };
 

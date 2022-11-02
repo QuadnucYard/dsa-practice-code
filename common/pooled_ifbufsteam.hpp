@@ -70,14 +70,18 @@ private:
 /// @brief Pool of ifbufstream.
 /// @tparam T Value type.
 template <class T>
-class ifbufstream_pool {
+class ifbufstream_pool : public json_log {
 public:
 	using value_type = T;
 	using stream_type = pooled_ifbufstream<value_type>;
 	using buffer_type = stream_type::buffer_type;
 
 	ifbufstream_pool(size_t buffer_count, size_t buffer_size) :
-		m_bufs(buffer_count, stream_type{ buffer_size }) {}
+		m_bufs(buffer_count, stream_type{ buffer_size }) {
+#ifdef LOGGING
+		m_log["app"].resize(0);
+#endif
+	}
 
 	~ifbufstream_pool() { close(); }
 
@@ -122,6 +126,9 @@ public:
 				auto siz = std::min(p->m_last - p->m_spos, (ptrdiff_t)loading_buf.size());
 				p->m_stream.read(reinterpret_cast<char*>(loading_buf.data()), siz * p->value_size);
 				});
+#ifdef LOGGING
+			m_log["app"].append(p - m_bufs.begin());
+#endif
 		}
 	}
 

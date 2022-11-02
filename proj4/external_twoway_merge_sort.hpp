@@ -39,7 +39,11 @@ public:
 	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
 		this->input_path = input_path;
 		this->output_path = output_path;
-		segments = replacement_selection<value_type>(buffer_size)(input_path, get_merge_file(0)); // Call replacement selection
+		replacement_selection<value_type> repsel(buffer_size);
+		segments = repsel(input_path, get_merge_file(0)); // Call replacement selection
+#ifdef LOGGING
+		m_log["repsel"] = repsel.get_log();
+#endif	
 		merge();
 	}
 
@@ -48,9 +52,7 @@ private:
 	/// @param id File index.
 	/// @return Path of merge file.
 	fs::path get_merge_file(size_t id) {
-		auto p = output_path;
-		p.replace_filename(std::string("merge_") + std::to_string(id));
-		return p;
+		return fs::path(output_path).replace_filename(std::string("merge_") + std::to_string(id));
 	}
 
 	/// @brief Merge segments.
@@ -79,6 +81,21 @@ private:
 		if (n > 1) fs::remove(get_merge_file(0)); // Remove the initial merge file.
 		fs::rename(get_merge_file(n - 1), output_path); // Rename the last file to output file.
 		best_merge_sequence = std::move(merge_seq);
+#ifdef LOGGING
+		m_log["in1"] = bufs.input_buf1.get_log();
+		m_log["in2"] = bufs.input_buf2.get_log();
+		m_log["out"] = bufs.output_buf.get_log();
+		for (size_t i = 0; i < best_merge_sequence.size(); i++) {
+			auto&& p = best_merge_sequence[i];
+			unsigned ii = static_cast<unsigned>(i);
+			m_log["best_merge_sequence"][ii]["first"]["size"] = p.first.size;
+			m_log["best_merge_sequence"][ii]["first"]["pos"] = p.first.pos;
+			m_log["best_merge_sequence"][ii]["first"]["index"] = p.first.index;
+			m_log["best_merge_sequence"][ii]["second"]["size"] = p.second.size;
+			m_log["best_merge_sequence"][ii]["second"]["pos"] = p.second.pos;
+			m_log["best_merge_sequence"][ii]["second"]["index"] = p.second.index;
+		}
+#endif	
 	}
 
 	/// @brief Merge file segments.

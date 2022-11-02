@@ -9,8 +9,13 @@ template <class T>
 class base_ofbufstream : public fbuf<T> {
 public:
 	using value_type = T;
+	using base = fbuf<T>;
 
-	base_ofbufstream(size_t buffer_size) : fbuf<T>(buffer_size) {}
+	base_ofbufstream(size_t buffer_size) : base(buffer_size) {
+#ifdef LOGGING
+		this->m_log["out"] = 0;
+#endif
+	}
 	base_ofbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ofbufstream(buffer_size) { open(path); }
 
 	~base_ofbufstream() { close(); }
@@ -54,6 +59,9 @@ protected:
 	inline void dump() {
 		m_stream.write(reinterpret_cast<char*>(this->m_buf.data()), this->m_pos * this->value_size);
 		this->m_pos = 0;
+#ifdef LOGGING
+		Json::inc(this->m_log, "out");
+#endif
 	}
 
 	/// @brief The output file stream.
@@ -114,6 +122,9 @@ private:
 		m_bufuture = std::async(std::launch::async, [this]() {
 			this->m_stream.write(reinterpret_cast<char*>(this->m_buf2.data()), this->m_buf2.size() * this->value_size);
 			});
+#ifdef LOGGING
+		Json::inc(this->m_log, "out");
+#endif
 	}
 
 	/// @brief Swap two buffers.

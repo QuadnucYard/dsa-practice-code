@@ -1,11 +1,12 @@
 #pragma once
 #include <fstream>
+#include "../common/json_log.hpp"
 
 /// @brief A file buffer specialized for value type.
 /// @tparam T Value type
 /// @tparam buffer_size Size of buffer elements.
 template <class T>
-class arraybuf {
+class arraybuf : public json_log {
 
 	constexpr static size_t value_size = sizeof(T); // Size of value type
 
@@ -70,6 +71,9 @@ public:
 		m_stream->read(reinterpret_cast<char*>(m_buf.data()), input_size * value_size);
 		m_stream->seekp(tmp_pos); // Recover write pos
 		m_size = input_size;
+#ifdef LOGGING
+		Json::inc(m_log, "in");
+#endif	
 	}
 
 	/// @brief Dump buffer data to file
@@ -84,6 +88,9 @@ public:
 		}
 		m_stream->flush();
 		m_size = 0;
+#ifdef LOGGING
+		Json::inc(m_log, "out");
+#endif	
 	}
 
 	inline const T* begin() const { return m_buf.data(); }
