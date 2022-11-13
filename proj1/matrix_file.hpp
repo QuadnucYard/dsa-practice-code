@@ -3,6 +3,19 @@
 #include <fstream>
 #include <filesystem>
 
+/*
+We use a code to determine loop order:
+ijk 0
+ikj 1
+jik 2
+jki 3
+kij 4
+kji 5
+*/
+#ifndef MATMUL_ORDER
+#define MATMUL_ORDER 1
+#endif
+
 /**
  * @brief A matrix with cache on disk.
  * BUG: It fails to compile when cache_size differs.
@@ -37,6 +50,7 @@ public:
 		m_cols = tmp_cols;
 		m_blocks = (m_rows * m_cols + block_size - 1) / block_size;
 		m_dirty = false;
+		count_in = count_out = 0;
 		load_block(0);
 	}
 
@@ -56,8 +70,8 @@ public:
 		m_file.write(reinterpret_cast<char*>(&m_rows), sizeof(uint32_t));
 		m_file.write(reinterpret_cast<char*>(&m_cols), sizeof(uint32_t));
 		m_blocks = (m_rows * m_cols + block_size - 1) / block_size;
-		printf("blocks=%d\n", m_blocks);
 		fill(0);
+		count_in = count_out = 0;
 	}
 
 	matrix_file(const matrix_file& other) = delete;
@@ -140,17 +154,41 @@ public:
 	 * @param rhs
 	 */
 	template <size_t S1, size_t S2>
-	void matmul(const matrix_file<T, S1>& lhs, const matrix_file<T, S1>& rhs) {
+	void matmul(const matrix_file<T, S1>& lhs, const matrix_file<T, S2>& rhs) {
+#if MATMUL_ORDER == 0 || MATMUL_ORDER == 1
+#define I i
+#elif MATMUL_ORDER == 2 || MATMUL_ORDER == 3
+#define I j
+#elif MATMUL_ORDER == 4 || MATMUL_ORDER == 5
+#define I k
+#endif
+#if MATMUL_ORDER == 2 || MATMUL_ORDER == 4
+#define J i
+#elif MATMUL_ORDER == 0 || MATMUL_ORDER == 5
+#define J j
+#elif MATMUL_ORDER == 1 || MATMUL_ORDER == 3
+#define J k
+#endif
+#if MATMUL_ORDER == 3 || MATMUL_ORDER == 5
+#define K i
+#elif MATMUL_ORDER == 1 || MATMUL_ORDER == 4
+#define K j
+#elif MATMUL_ORDER == 0 || MATMUL_ORDER == 2
+#define K k
+#endif
 		size_t n = lhs.rows(), p = lhs.cols(), m = rhs.cols();
 		fill(0);
-		for (size_t i = 0; i < n; i++) {
-			for (size_t k = 0; k < p; k++) {
-				for (size_t j = 0; j < m; j++) {
+		for (size_t I = 0; I < n; I++) {
+			for (size_t J = 0; J < p; J++) {
+				for (size_t K = 0; K < m; K++) {
 					(*this)[i, j] += lhs[i, k] * rhs[k, j];
 				}
 			}
 		}
 		store_block();
+#undef I
+#undef J
+#undef K
 	}
 
 private:
@@ -184,9 +222,12 @@ private:
 	 */
 	void load_block(size_t b) const {
 		if (m_dirty) store_block();
+#ifndef NO_IO
 		m_file.seekg(header_size + cache_size * b);
 		m_file.read(reinterpret_cast<char*>(const_cast<T*>(m_cacheline)), cache_size);
+#endif
 		m_current_block = b;
+		count_in++;
 	}
 
 public:
@@ -196,18 +237,23 @@ public:
 	 *
 	 */
 	void store_block() const {
-		m_file.seekp(header_size + cache_size * m_current_block);
 		size_t n = cache_size;
 		if (m_current_block == m_blocks - 1) {
 			n = m_rows * m_cols * sizeof(T) - m_current_block * cache_size;
 		}
+#ifndef NO_IO
+		m_file.seekp(header_size + cache_size * m_current_block);
 		m_file.write(reinterpret_cast<const char*>(m_cacheline), n);
+#endif
 		m_dirty = false;
+		count_out++;
 	}
 
 public:
 	inline static size_t output_row_limit{ 6 }; // Limit of displayed rows in `to_string`.
 	inline static size_t output_col_limit{ 4 }; // Limit of displayed cols in `to_string`.
+	mutable size_t count_in;
+	mutable size_t count_out;
 
 private:
 	std::filesystem::path m_path; // Path of this matrix file

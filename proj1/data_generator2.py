@@ -3,9 +3,6 @@ import struct
 import sys
 import numpy as np
 
-print(sys.argv, os.getcwd())
-n, k, m = 8, 8, 8
-
 
 def gen(n, m) -> np.ndarray:
     return np.random.randint(low=0, high=255, size=(n, m))
@@ -18,11 +15,15 @@ def save(mat: np.ndarray, path: str) -> None:
         fout.write(struct.pack(f"{mat.size}i", *mat.reshape(-1)))
 
 
-matA = gen(n, k)
-matB = gen(k, m)
-matC = matA @ matB
+sizes = [1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10]
 
-save(matA, "proj1/data/matA2.in")
-save(matB, "proj1/data/matB2.in")
-save(matC, "proj1/data/matC2.ans")
-print(matA)
+for i, n in enumerate(sizes):
+
+    matA = gen(n, n)
+    matB = gen(n, n)
+    matC = matA @ matB
+
+    save(matA, f"proj1/data/mat_{i}_A.in")
+    save(matB, f"proj1/data/mat_{i}_B.in")
+    save(matC, f"proj1/data/mat_{i}_C.ans")
+    print(matA)
