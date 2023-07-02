@@ -23,6 +23,11 @@ public:
 	/// @param input_path Path of input file.
 	/// @param output_path Path of output file.
 	void operator()(const fs::path& input_path, const fs::path& output_path) {
+#ifdef LOGGING
+		input_buf1.clear_log();
+		input_buf2.clear_log();
+		output_buf.clear_log();
+#endif
 		// Sort run: Sort all data by block
 		input_buf1.open(input_path);
 		output_buf.open(output_path);
@@ -40,8 +45,7 @@ public:
 
 		// Merge run
 
-		fs::path pA = output_path, pB = output_path; // merge A to B
-		pB.replace_filename(".tmp");
+		fs::path pA = output_path, pB = fs::path(output_path).replace_filename(".tmp"); // merge A to B
 		// To keep continuity, let buf2 read from middle.
 		for (size_t len = buffer_size; len < tot_size; len <<= 1) { // Length of each input way.
 			size_t half = (tot_size + len - 1) / (len << 1) * len; // Middle position.

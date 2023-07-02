@@ -18,6 +18,10 @@ public:
 	inline void bind(std::fstream* stream) {
 		m_stream = stream;
 		m_size = 0;
+#ifdef LOGGING
+		m_log["in"] = 0;
+		m_log["out"] = 0;
+#endif	
 	}
 
 	/// @brief Changing the current read position.
@@ -86,7 +90,7 @@ public:
 		} else {
 			m_stream->write(reinterpret_cast<const char*>(m_buf.data()), wtsize);
 		}
-		m_stream->flush();
+		// m_stream->flush();
 		m_size = 0;
 #ifdef LOGGING
 		Json::inc(m_log, "out");

@@ -79,6 +79,7 @@ public:
 	ifbufstream_pool(size_t buffer_count, size_t buffer_size) :
 		m_bufs(buffer_count, stream_type{ buffer_size }) {
 #ifdef LOGGING
+		m_log["buffer_size"] = buffer_size;
 		m_log["app"].resize(0);
 #endif
 	}
@@ -99,13 +100,11 @@ public:
 	/// @brief Collect empty buffers, and allocate buffers as needed.
 	void collect_allocate() {
 		// Collect empty buffers.
-		for (size_t i = 0; i < m_bufs.size(); i++) {
-			if (!m_bufs[i].m_buf.empty()) {
-				m_free_bufs.push_back(std::move(m_bufs[i].m_buf));
+		for (auto&& buf : m_bufs) {
+			if (!buf.m_buf.empty()) {
+				m_free_bufs.push_back(std::move(buf.m_buf));
 			}
 		}
-		// It should have free buffers.
-		assert(!m_free_bufs.empty());
 		// Await input loading.
 		if (m_bufuture.valid()) m_bufuture.get();
 		// Find the buffer with least last key.
@@ -117,6 +116,10 @@ public:
 		}
 		// If find any buffer that need supplement, load for it.
 		if (p != m_bufs.end()) {
+			// It should have free buffers.
+			if (m_free_bufs.empty()) {
+				throw std::runtime_error("No free buffers!");
+			}
 			// Get free buffer, and push it to the back of that queue.
 			p->m_buf_queue.push_back(std::move(m_free_bufs.front()));
 			m_free_bufs.pop_front();

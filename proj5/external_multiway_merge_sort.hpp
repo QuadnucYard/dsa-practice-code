@@ -26,7 +26,7 @@ public:
 		/// Now merge.
 
 		size_t merge_order = segments.size(); // Merge order
-		size_t buffer_size_2 = buffer_size * 2 / merge_order + 1; // Add 1 for fear of zero trap.
+		size_t buffer_size_2 = std::max(buffer_size * 2 / merge_order, (size_t)16); // Add 1 for fear of zero trap.
 		//printf("order = %d, size = %d\n", merge_order, buffer_size_2);
 		ifbufstream_pool<value_type> pool(merge_order, buffer_size_2); // Buffer pool
 		ofbufstream<value_type, double_buffer_tag> output_buf(buffer_size_2, output_path); // Output buffer

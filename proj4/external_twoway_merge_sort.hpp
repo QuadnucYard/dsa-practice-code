@@ -34,12 +34,13 @@ private:
 
 public:
 
-	using base_sorter::base_sorter;
+	external_twoway_merge_sorter(size_t buffer_size, size_t loser_size) : base_sorter(buffer_size), loser_size(loser_size) {}
+	external_twoway_merge_sorter(size_t buffer_size) : external_twoway_merge_sorter(buffer_size, buffer_size) {}
 
 	void operator()(const std::filesystem::path& input_path, const std::filesystem::path& output_path) {
 		this->input_path = input_path;
 		this->output_path = output_path;
-		replacement_selection<value_type> repsel(buffer_size);
+		replacement_selection<value_type> repsel(buffer_size, loser_size);
 		segments = repsel(input_path, get_merge_file(0)); // Call replacement selection
 #ifdef LOGGING
 		m_log["repsel"] = repsel.get_log();
@@ -116,6 +117,7 @@ private:
 	}
 
 private:
+	size_t loser_size;
 	/// @brief Path of input file.
 	fs::path input_path;
 	/// @brief Path of output file.

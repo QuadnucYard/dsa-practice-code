@@ -11,14 +11,14 @@ public:
 	using value_type = T;
 	using base = fbuf<T>;
 
-	base_ofbufstream(size_t buffer_size) : base(buffer_size) {
-#ifdef LOGGING
-		this->m_log["out"] = 0;
-#endif
-	}
+	base_ofbufstream(size_t buffer_size) : base(buffer_size) {}
 	base_ofbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ofbufstream(buffer_size) { open(path); }
 
 	~base_ofbufstream() { close(); }
+
+#ifdef LOGGING
+	void clear_log() override { this->m_log["out"] = 0; }
+#endif
 
 	/// @brief Opens an external file.
 	/// @param path Path of a file.

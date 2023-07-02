@@ -5,13 +5,13 @@
 #include <algorithm>
 #include <filesystem>
 
-const int N = 1 << 16;
+const int N = 1 << 20;
 
 int main() {
 
 	std::vector<int> a(N);
 	std::default_random_engine rng;
-	std::uniform_int_distribution distrib(0, 0xffffff);
+	std::uniform_int_distribution distrib(-0xffff, 0xffff);
 	std::ranges::generate(a, [&]() { return distrib(rng); });
 
 	auto pdata = std::filesystem::current_path() / "data";

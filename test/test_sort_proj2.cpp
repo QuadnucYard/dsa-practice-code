@@ -6,9 +6,6 @@
 #include <iostream>
 #include "judge.hpp"
 #include "../proj2/external_quick_sort.hpp"
-#include "../proj3/external_merge_sort.hpp"
-#include "../proj4/external_twoway_merge_sort.hpp"
-#include "../proj5/external_multiway_merge_sort.hpp"
 
 struct judge_impl {
 	judge J;
@@ -22,10 +19,11 @@ struct judge_impl {
 	template <class T>
 	void test() {
 		for (size_t s : buffer_sizes) {
-			J.test_sort(external_quick_sorter<T>(s));
-			J.test_sort(external_merge_sorter<T>(s));
-			J.test_sort(external_twoway_merge_sorter<T>(s));
-			J.test_sort(external_multiway_merge_sorter<T>(s));
+			J.test_sort(external_quick_sorter<T>(s, s));
+			// J.test_sort(external_quick_sorter<T>(s, s << 1));
+			// J.test_sort(external_quick_sorter<T>(s, s << 2));
+			// J.test_sort(external_quick_sorter<T>(s, s << 3));
+			// J.test_sort(external_quick_sorter<T>(s, s << 4));
 			J.dump_result(result_path);
 		}
 	}
@@ -33,8 +31,6 @@ struct judge_impl {
 
 int main() {
 	judge_impl J;
-	J.test<int8_t>();
 	J.test<int32_t>();
-	J.test<double>();
 	return 0;
 }

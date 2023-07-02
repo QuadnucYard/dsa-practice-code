@@ -12,14 +12,15 @@ class replacement_selection : public base_sorter {
 
 public:
 
-	replacement_selection(size_t buffer_size) : base_sorter(buffer_size) {}
+	replacement_selection(size_t buffer_size, size_t loser_size) : base_sorter(buffer_size), loser_size(loser_size) {}
+	replacement_selection(size_t buffer_size) : replacement_selection(buffer_size, buffer_size) {}
 
 	std::vector<size_t> operator()(const fs::path& input_path, const fs::path& output_path) {
 		// It can use buffer featuring both input and output.
 		async_iofbufstream<value_type> iobuf(buffer_size, input_path, output_path);
 		// Build loser tree, and insert elements reversely.
-		loser_tree<std::pair<int, value_type>> lt(buffer_size);
-		for (ssize_t i = buffer_size - 1; i >= 0; i--) {
+		loser_tree<std::pair<int, value_type>> lt(loser_size);
+		for (ssize_t i = loser_size - 1; i >= 0; i--) {
 			if (iobuf.ieof()) { // If input data is not enough, supplement with virtual segs.
 				lt.push_at({ 2, 0 }, i);
 				continue;
@@ -57,11 +58,16 @@ public:
 			rc = lt.top().first; // Update rc. In fact, it just increment rc by 1.
 			seg.push_back(cnt);
 		}
+		iobuf.close();
 #ifdef LOGGING
+		m_log["loser_size"] = loser_size;
 		m_log["io"] = iobuf.get_log();
 		Json::set_vector(m_log, "seg", seg);
 #endif
 		return seg;
 	}
+
+private:
+	size_t loser_size;
 
 };

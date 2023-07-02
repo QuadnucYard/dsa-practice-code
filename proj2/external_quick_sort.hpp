@@ -20,13 +20,11 @@ public:
 
 	/// @brief Constructor
 	/// @param tmp_path Path of temporary file.
-	external_quick_sorter(size_t buffer_size) : base_sorter(buffer_size),
+	external_quick_sorter(size_t buffer_size, size_t heap_size) : base_sorter(buffer_size), heap_size(heap_size),
 		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size, true) {}
 
-	~external_quick_sorter() {
-		// Remove temporary file
-		fs::remove(m_tmp_path);
-	}
+	external_quick_sorter(size_t buffer_size) : base_sorter(buffer_size, buffer_size),
+		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size, true) {}
 
 	/// @brief Sort array in binary file.
 	/// @param input_path Path of input file.
@@ -49,9 +47,11 @@ public:
 		finput.close();
 		foutput.close();
 #ifdef LOGGING
+		m_log["rec"] = 0;
 		m_log["input"] = input_buf.get_log();
 		m_log["small"] = small_buf.get_log();
 		m_log["large"] = large_buf.get_log();
+		m_log["heap_size"] = heap_size;
 #endif
 	}
 
@@ -64,7 +64,7 @@ private:
 		middle_heap = interval_heap<T>(input_buf.begin(), input_buf.begin() + input_size);
 		//middle_heap.validate();
 		size_t cur = first + input_size;
-		if (cur < last) { // Read another run to make room for output.
+		while (cur < last && cur - first < heap_size) { // Read another run to make room for output.
 			input_size = std::min(last - cur, buffer_size);
 			input_buf.load(cur, input_size);
 			for (size_t i = 0; i < input_size; i++) {
@@ -113,7 +113,7 @@ private:
 			}
 		}
 		// Write back all data in buffer
-		small_buf.dump();
+		//small_buf.dump();
 		large_buf.dump();
 
 #ifdef DEBUG
@@ -166,7 +166,7 @@ private:
 #endif
 
 private:
-	std::filesystem::path m_tmp_path; 	// Path of temp file
+	size_t heap_size;
 	std::fstream finput; 				// Input file stream
 	std::fstream foutput; 				// Output file stream
 	std::fstream ftemp; 				// Temp file stream

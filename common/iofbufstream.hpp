@@ -15,16 +15,15 @@ public:
 
 	async_iofbufstream(size_t buffer_size) :
 		buffer_size(buffer_size), m_buf(buffer_size), m_ibuf(buffer_size), m_obuf(buffer_size), m_ipos(buffer_size),
-		m_opos(0), m_ispos(-1), m_isize(-1) {
-#ifdef LOGGING
-		this->m_log["in"] = 0;
-		this->m_log["out"] = 0;
-#endif
-	}
+		m_opos(0), m_ispos(-1), m_isize(-1) {}
 	async_iofbufstream(size_t buffer_size, const fs::path& input_path, const fs::path& output_path) : async_iofbufstream(buffer_size) {
 		open(input_path, output_path);
 	}
 	~async_iofbufstream() { close(); }
+
+#ifdef LOGGING
+	void clear_log() override { this->m_log["in"] = 0; this->m_log["out"] = 0; }
+#endif
 
 	/// @brief Opens external input file and output file. It will immediately load the first block synchronously. 
 	/// @param input_path Path of input file.

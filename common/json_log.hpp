@@ -22,6 +22,8 @@ class json_log {
 #ifdef LOGGING
 
 public:
+	json_log() { clear_log(); }
+	virtual void clear_log() { m_log.clear(); }
 	Json::Value get_log() const { return m_log; }
 	std::string get_log_str() const { return Json::FastWriter().write(m_log); }
 protected:
