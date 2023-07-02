@@ -2,20 +2,26 @@
 #include "fbuf.hpp"
 #include <future>
 
+namespace qy {
 
 /// @brief Base ifstream with buffer.
 /// @tparam T Value type.
 template <class T>
 class base_ifbufstream : public fbuf<T> {
-
 public:
 	using value_type = T;
 	using base = fbuf<T>;
 	using base::buffer_type;
 
 	base_ifbufstream(size_t buffer_size) : base(buffer_size) {}
-	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base_ifbufstream(buffer_size) { open(path); }
+
+	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) :
+		base_ifbufstream(buffer_size) {
+		open(path);
+	}
+
 	base_ifbufstream(const base_ifbufstream& o) : base_ifbufstream(o.buffer_size) {}
+
 	~base_ifbufstream() { close(); }
 
 #ifdef LOGGING
@@ -34,7 +40,7 @@ public:
 		}
 	}
 
-	/// @brief Close the file. 
+	/// @brief Close the file.
 	void close() override {
 		base::close();
 		m_stream.close();
@@ -61,14 +67,14 @@ public:
 	/// @brief Get the current read position, in number of elements.
 	std::streamoff tellg() {
 		std::streamoff t = m_stream.tellg();
-		if (t != -1) return t / this->value_size;
-		else return -1;
+		if (t != -1)
+			return t / this->value_size;
+		else
+			return -1;
 	}
 
 	/// @brief Get whether file span is end.
-	inline bool eof() {
-		return m_stream.eof() || tellg() >= m_last;
-	}
+	inline bool eof() { return m_stream.eof() || tellg() >= m_last; }
 
 	/// @brief Get size of file span.
 	/// @return Span size.
@@ -76,7 +82,7 @@ public:
 
 	inline const value_type& back() const { return this->m_buf.back(); }
 
-	inline virtual base_ifbufstream& operator>> (value_type& x) {
+	inline virtual base_ifbufstream& operator>>(value_type& x) {
 		x = this->m_buf[this->m_pos++];
 		this->m_spos++;
 		return *this;
@@ -94,10 +100,10 @@ public:
 	}
 
 protected:
-
 	/// @brief Load data from file to buffer.
 	inline virtual void load() {
-		m_stream.read(reinterpret_cast<char*>(this->m_buf.data()), this->m_buf.size() * this->value_size);
+		m_stream.read(reinterpret_cast<char*>(this->m_buf.data()),
+					  this->m_buf.size() * this->value_size);
 		this->m_pos = 0;
 #ifdef LOGGING
 		Json::inc(this->m_log, "in");
@@ -108,34 +114,31 @@ protected:
 	std::ifstream m_stream;
 	/// @brief Last element pos of file span.
 	std::streamoff m_last;
-
 };
-
 
 /// @brief Basic ifstream with buffer.
 /// @tparam T Value type.
 template <class T>
 class basic_ifbufstream : public base_ifbufstream<T> {
-
 public:
 	using value_type = T;
 	using base = base_ifbufstream<T>;
 
 	using base::base;
 
-	inline basic_ifbufstream& operator>> (value_type& x) override {
-		if (this->m_spos == -1) this->seek(0);
-		if (this->m_pos == this->buffer_size) this->load();
+	inline basic_ifbufstream& operator>>(value_type& x) override {
+		if (this->m_spos == -1)
+			this->seek(0);
+		if (this->m_pos == this->buffer_size)
+			this->load();
 		base::operator>>(x);
 		return *this;
 	}
-
 };
-
 
 /// @brief Async ifstream with double buffer.
 /// It read the first block synchronously, and the next block asynchronously.
-/// When reading, if the fore-buffer is empty, wait for back-buffer to complete loading, then swap buffer, and load new block. 
+/// When reading, if the fore-buffer is empty, wait for back-buffer to complete loading, then swap buffer, and load new block.
 /// @tparam T Value type
 template <class T>
 class async_ifbufstream : public base_ifbufstream<T> {
@@ -144,7 +147,10 @@ public:
 	using base = base_ifbufstream<T>;
 
 	async_ifbufstream(size_t buffer_size) : base(buffer_size), m_buf2(buffer_size) {}
-	async_ifbufstream(size_t buffer_size, const std::filesystem::path& path) : base(buffer_size, path), m_buf2(buffer_size) {}
+
+	async_ifbufstream(size_t buffer_size, const std::filesystem::path& path) :
+		base(buffer_size, path), m_buf2(buffer_size) {}
+
 	async_ifbufstream(const async_ifbufstream& o) : async_ifbufstream(o.buffer_size) {}
 
 	/// @brief Changing the current read position, and set pos of EOF. It will result in buffer reload.
@@ -154,14 +160,16 @@ public:
 		if (this->m_spos != first) {
 			base::seek(first, last);
 			this->load();
-			if (!this->m_stream.eof()) aload();
+			if (!this->m_stream.eof())
+				aload();
 		} else {
 			this->m_last = last;
 		}
 	}
 
-	inline async_ifbufstream& operator>> (value_type& x) {
-		if (this->m_spos == -1) this->seek(0);
+	inline async_ifbufstream& operator>>(value_type& x) {
+		if (this->m_spos == -1)
+			this->seek(0);
 		if (this->m_pos == this->buffer_size) {
 			swap_buffer();
 			aload();
@@ -171,12 +179,12 @@ public:
 	}
 
 private:
-
 	/// @brief Load data to background buffer.
 	inline void aload() {
 		m_bufuture = std::async(std::launch::async, [this]() {
-			this->m_stream.read(reinterpret_cast<char*>(this->m_buf2.data()), this->m_buf2.size() * this->value_size);
-			});
+			this->m_stream.read(reinterpret_cast<char*>(this->m_buf2.data()),
+								this->m_buf2.size() * this->value_size);
+		});
 #ifdef LOGGING
 		Json::inc(this->m_log, "in");
 #endif
@@ -195,10 +203,20 @@ private:
 	std::future<void> m_bufuture;
 };
 
+template <class T, class Tag>
+struct __ifbufstream_dispatcher {};
 
-template <class T, class Tag> struct __ifbufstream_dispatcher {};
-template <class T> struct __ifbufstream_dispatcher<T, basic_buffer_tag> { using type = basic_ifbufstream<T>; };
-template <class T> struct __ifbufstream_dispatcher<T, double_buffer_tag> { using type = async_ifbufstream<T>; };
+template <class T>
+struct __ifbufstream_dispatcher<T, basic_buffer_tag> {
+	using type = basic_ifbufstream<T>;
+};
+
+template <class T>
+struct __ifbufstream_dispatcher<T, double_buffer_tag> {
+	using type = async_ifbufstream<T>;
+};
 
 template <class T, class Tag>
 using ifbufstream = __ifbufstream_dispatcher<T, Tag>::type;
+
+} // namespace qy

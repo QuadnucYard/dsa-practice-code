@@ -5,7 +5,7 @@
 #include <random>
 
 template <class T>
-void print_heap(const interval_heap<T>& h) {
+void print_heap(const qy::interval_heap<T>& h) {
 	int i = 0, m = 2;
 	for (const auto x : h) {
 		std::cout << x << " ";
@@ -20,6 +20,8 @@ void print_heap(const interval_heap<T>& h) {
 }
 
 int main() {
+	using namespace qy;
+
 	using H = interval_heap<int>;
 	// Simple push
 	{

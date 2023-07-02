@@ -3,6 +3,8 @@
 #include <iostream>
 
 int main() {
+	using namespace qy;
+
 	external_twoway_merge_sorter<int> sorter(1000);
 	//fs::current_path("E:/Project/dsa-practice-code/proj4");
 	std::cout << fs::current_path() << std::endl;

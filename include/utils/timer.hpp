@@ -2,6 +2,8 @@
 #include <chrono>
 #include <iostream>
 
+namespace qy {
+
 /// @brief Timer the function.
 /// @param __fn The function.
 /// @param ...__args Arguments to be passed to the function.
@@ -22,5 +24,9 @@ void func_timer_print(_Fn&& __fn, _Args&&... __args) {
 	auto start_tp = std::chrono::high_resolution_clock::now();
 	__fn(std::forward<_Args>(__args)...);
 	auto end_tp = std::chrono::high_resolution_clock::now();
-	std::cout << "Duration: " << std::chrono::duration_cast<std::chrono::duration<int, std::milli>>(end_tp - start_tp).count() << "ms\n";
+	using duration_t = std::chrono::duration<int, std::milli>;
+	auto duration = std::chrono::duration_cast<duration_t>(end_tp - start_tp);
+	std::cout << "Duration: " << duration << "\n";
 }
+
+} // namespace qy

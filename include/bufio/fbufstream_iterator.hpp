@@ -3,6 +3,8 @@
 #include <iterator>
 #include <thread>
 
+namespace qy {
+
 class ifbufstream_sentinel {};
 
 /// @brief Iterator for ifbufstream
@@ -20,16 +22,27 @@ public:
 	using self = ifbufstream_iterator<T>;
 
 	ifbufstream_iterator() : stream(nullptr), end_marker(false) {}
+
 	ifbufstream_iterator(stream_type& s) : stream(&s) { read(); }
 
-	inline reference operator* () const { return value; }
-	inline reference operator-> () const { return &*this; }
+	inline reference operator*() const { return value; }
 
-	inline self& operator++ () { read(); return *this; }
-	inline self operator++ (int) { auto tmp = *this; read(); return tmp; }
+	inline reference operator->() const { return &*this; }
 
-	inline bool operator== (const ifbufstream_sentinel& o) { return !end_marker; }
-	inline bool operator== (const ifbufstream_iterator& o) { return !end_marker; }
+	inline self& operator++() {
+		read();
+		return *this;
+	}
+
+	inline self operator++(int) {
+		auto tmp = *this;
+		read();
+		return tmp;
+	}
+
+	inline bool operator==(const ifbufstream_sentinel& o) { return !end_marker; }
+
+	inline bool operator==(const ifbufstream_iterator& o) { return !end_marker; }
 
 private:
 	stream_type* stream;
@@ -38,10 +51,10 @@ private:
 
 	inline void read() {
 		end_marker = (bool)*stream;
-		if (end_marker) *stream >> value;
+		if (end_marker)
+			*stream >> value;
 	}
 };
-
 
 /// @brief Iterator for ofbufstream
 /// @tparam T Value type
@@ -59,15 +72,19 @@ public:
 
 	ofbufstream_iterator(stream_type& s) : stream(&s) {}
 
-	inline self& operator= (const T& value) {
+	inline self& operator=(const T& value) {
 		*stream << value;
 		return *this;
 	}
 
-	inline self& operator* () { return *this; }
-	inline self& operator++ () { return *this; }
-	inline self& operator++ (int) { return *this; }
+	inline self& operator*() { return *this; }
+
+	inline self& operator++() { return *this; }
+
+	inline self& operator++(int) { return *this; }
 
 private:
 	stream_type* stream;
 };
+
+} // namespace qy

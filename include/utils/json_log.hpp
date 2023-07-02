@@ -18,18 +18,23 @@ namespace Json {
 }
 #endif
 
-class json_log {
+namespace qy {
 
+class json_log {
 #ifdef LOGGING
 
-public:
-	json_log() { clear_log(); }
-	virtual void clear_log() { m_log.clear(); }
-	Json::Value get_log() const { return m_log; }
-	std::string get_log_str() const { return Json::FastWriter().write(m_log); }
-protected:
-	/// @brief Log in json form.
-	Json::Value m_log;
+	public:
+		json_log() { clear_log(); }
+
+		virtual void clear_log() { m_log.clear(); }
+
+		Json::Value get_log() const { return m_log; }
+
+		std::string get_log_str() const { return Json::FastWriter().write(m_log); }
+
+	protected:
+		/// @brief Log in json form.
+		Json::Value m_log;
 
 #else
 
@@ -37,5 +42,6 @@ public:
 	std::string get_log_str() const { return {}; }
 
 #endif
-
 };
+
+} // namespace qy

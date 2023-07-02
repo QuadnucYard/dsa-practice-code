@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cassert>
 
+namespace qy {
+
 /// @brief External sorting implemented by quick sort
 /// @tparam T Value type of sorted file
 /// @tparam buffer_size Buffer size, aka number of buffer elements
@@ -187,3 +189,5 @@ private:
 	buffer_type small_buf;		  // Buffer for small, bound output file
 	buffer_type large_buf;		  // Buffer for large, bound temp file
 };
+
+} // namespace qy

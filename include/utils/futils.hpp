@@ -7,10 +7,11 @@
 #include <fmt/ranges.h>
 #endif
 
+namespace qy {
+
 namespace fs = std::filesystem;
 
-
-/// @brief Read binary file stored an array typed T. 
+/// @brief Read binary file stored an array typed T.
 /// @tparam T Value type.
 /// @param path The path of file.
 /// @return A vector with file data.
@@ -41,6 +42,9 @@ bool file_compare(const fs::path& out, const fs::path& ans) {
 template <class T>
 void print_binary_file(const fs::path& path) {
 	auto&& v = read_binary_file<T>(path);
-	fmt::print("{} [{}][{}/{}]\n", v, std::ranges::is_sorted(v), std::ranges::is_sorted_until(v) - v.begin(), v.size());
+	fmt::print("{} [{}][{}/{}]\n", v, std::ranges::is_sorted(v),
+			   std::ranges::is_sorted_until(v) - v.begin(), v.size());
 }
 #endif
+
+} // namespace qy

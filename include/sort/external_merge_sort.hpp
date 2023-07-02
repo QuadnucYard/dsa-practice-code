@@ -4,20 +4,23 @@
 #include <algorithm>
 #include <cassert>
 
+namespace qy {
 
 /// @brief External sorting implemented by merge sort
 /// @tparam T Value type of sorted file
 /// @tparam multithread Whether use multithread io. Default is false.
 template <class T>
 class external_merge_sorter : public base_sorter {
-
 public:
 	using value_type = T;
 
 	/// @brief Constructor
 	/// @param buffer_size Size of buffer elements.
-	external_merge_sorter(size_t buffer_size) : base_sorter(buffer_size),
-		input_buf1(buffer_size), input_buf2(buffer_size), output_buf(buffer_size) {}
+	external_merge_sorter(size_t buffer_size) :
+		base_sorter(buffer_size),
+		input_buf1(buffer_size),
+		input_buf2(buffer_size),
+		output_buf(buffer_size) {}
 
 	/// @brief Sort array in binary file.
 	/// @param input_path Path of input file.
@@ -45,26 +48,26 @@ public:
 
 		// Merge run
 
-		fs::path pA = output_path, pB = fs::path(output_path).replace_filename(".tmp"); // merge A to B
+		fs::path pA = output_path,
+				 pB = fs::path(output_path).replace_filename(".tmp"); // merge A to B
 		// To keep continuity, let buf2 read from middle.
 		for (size_t len = buffer_size; len < tot_size; len <<= 1) { // Length of each input way.
-			size_t half = (tot_size + len - 1) / (len << 1) * len; // Middle position.
+			size_t half = (tot_size + len - 1) / (len << 1) * len;	// Middle position.
 			input_buf1.open(pA), input_buf2.open(pA);
 			output_buf.open(pB);
 			input_buf1.seek(0, half), input_buf2.seek(half);
 			for (size_t i = 0; i < half; i += len) {
 				input_buf1.seek(i, i + len);
 				input_buf2.seek(i + half, std::min(i + half + len, tot_size));
-				std::merge(
-					ifbufstream_iterator(input_buf1), ifbufstream_iterator<value_type>(),
-					ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(),
-					ofbufstream_iterator(output_buf)
-				);
+				std::merge(ifbufstream_iterator(input_buf1), ifbufstream_iterator<value_type>(),
+						   ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(),
+						   ofbufstream_iterator(output_buf));
 			}
 			// Move rest data to output file if any
 			if (half * 2 < tot_size) {
 				input_buf2.seek(half * 2, tot_size);
-				std::copy(ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(), ofbufstream_iterator(output_buf));
+				std::copy(ifbufstream_iterator(input_buf2), ifbufstream_iterator<value_type>(),
+						  ofbufstream_iterator(output_buf));
 			}
 			input_buf1.close();
 			input_buf2.close();
@@ -85,7 +88,6 @@ public:
 	}
 
 private:
-
 #ifdef DEBUG
 	/// @brief Check whether sorting goes wrong. Only for each block.
 	void validate(const std::filesystem::path& output_path, size_t len) {
@@ -109,3 +111,5 @@ private:
 	ifbufstream<value_type, basic_buffer_tag> input_buf2;
 	ofbufstream<value_type, basic_buffer_tag> output_buf;
 };
+
+} // namespace qy

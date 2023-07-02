@@ -3,6 +3,8 @@
 #include <vector>
 
 int main() {
+	using namespace qy;
+
 	std::vector<int> input_data{51, 49, 39, 46, 38, 29, 14, 61, 15, 30, 1,	48,
 								52, 3,	63, 27, 4,	13, 89, 24, 46, 58, 33, 76};
 	loser_tree<std::pair<int, int>> lt(32);

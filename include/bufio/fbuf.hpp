@@ -4,6 +4,8 @@
 #include <fstream>
 #include <vector>
 
+namespace qy {
+
 namespace fs = std::filesystem;
 
 struct basic_buffer_tag {};
@@ -25,8 +27,7 @@ public:
 		m_pos(0),
 		m_first(0),
 		m_spos(-1),
-		m_buf(buffer_size)
-	{}
+		m_buf(buffer_size) {}
 
 	virtual void close() { m_spos = -1; }
 
@@ -43,3 +44,5 @@ protected:
 	/// It has been tested that vector<T> outperforms unique_ptr<T[]> about 4x without O2, but slightly slower than the latter with O2.
 	buffer_type m_buf;
 };
+
+} // namespace qy

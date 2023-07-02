@@ -2,6 +2,8 @@
 #include "utils/json_log.hpp"
 #include <fstream>
 
+namespace qy {
+
 /// @brief A file buffer specialized for value type.
 /// @tparam T Value type
 /// @tparam buffer_size Size of buffer elements.
@@ -106,3 +108,5 @@ private:
 	size_t m_size;			// Filled size
 	bool m_backward;
 };
+
+} // namespace qy

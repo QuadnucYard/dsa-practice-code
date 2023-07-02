@@ -4,6 +4,8 @@
 #include <iostream>
 
 int main() {
+	using namespace qy;
+
 	// Issue: When input file is too large, it cannot open it.
 	external_multiway_merge_sorter<int> sorter(1 << 12);
 	func_timer_print(sorter, "proj5/data/arr.in", "proj5/data/arr.out", 0);

@@ -4,6 +4,8 @@
 #include <ranges>
 #include <cassert>
 
+namespace qy {
+
 /**
  * @brief Double-end priority queue implemented by interval heap
  *
@@ -24,9 +26,7 @@ public:
 	 *
 	 * @param il Initialize list
 	 */
-	interval_heap(std::initializer_list<T> il) : m_data(il) {
-		_make_heap_check();
-	}
+	interval_heap(std::initializer_list<T> il) : m_data(il) { _make_heap_check(); }
 
 	/**
 	 * @brief Construct a new interval heap object from iterator pair
@@ -84,7 +84,8 @@ public:
 	 */
 	const_reference top_min() const {
 		size_t i = m_data.size();
-		if (i == 0) throw std::out_of_range("Heap empty!");
+		if (i == 0)
+			throw std::out_of_range("Heap empty!");
 		return m_data[0];
 	}
 
@@ -95,9 +96,12 @@ public:
 	 */
 	const_reference top_max() const {
 		size_t i = m_data.size();
-		if (i == 0) throw std::out_of_range("Heap empty!");
-		else if (i == 1) return m_data[0];
-		else return m_data[1];
+		if (i == 0)
+			throw std::out_of_range("Heap empty!");
+		else if (i == 1)
+			return m_data[0];
+		else
+			return m_data[1];
 	}
 
 	/**
@@ -107,7 +111,7 @@ public:
 	 */
 	void push(const_reference x) {
 		size_t i = m_data.size(), parentIndex = parent(i);
-		if (i & 1) { // New value can fill a twin node.
+		if (i & 1) {				 // New value can fill a twin node.
 			if (x < m_data.back()) { // Need swap
 				auto t = std::move(m_data.back());
 				m_data.back() = x;
@@ -120,8 +124,10 @@ public:
 			}
 		} else { // If the new node is single, we should discuss which branch it will go.
 			m_data.push_back(x);
-			if (x < m_data[parentIndex]) _push_heap(i, parentIndex, x, std::greater()); // Small
-			else if (x > m_data[parentIndex ^ 1]) _push_heap(i, parentIndex ^ 1, x, std::less()); // Large
+			if (x < m_data[parentIndex])
+				_push_heap(i, parentIndex, x, std::greater()); // Small
+			else if (x > m_data[parentIndex ^ 1])
+				_push_heap(i, parentIndex ^ 1, x, std::less()); // Large
 		}
 	}
 
@@ -130,7 +136,8 @@ public:
 	 */
 	void pop_min() {
 		size_t i = m_data.size();
-		if (i == 0) throw std::out_of_range("Heap empty!");
+		if (i == 0)
+			throw std::out_of_range("Heap empty!");
 		else if (i == 1) {
 			m_data.pop_back();
 			return;
@@ -143,7 +150,8 @@ public:
 	 */
 	void pop_max() {
 		size_t i = m_data.size();
-		if (i == 0) throw std::out_of_range("Heap empty!");
+		if (i == 0)
+			throw std::out_of_range("Heap empty!");
 		else if (i == 1) {
 			m_data.pop_back();
 			return;
@@ -162,22 +170,25 @@ public:
 		// Inclusive relation
 		for (size_t i = 2; i < m_data.size(); i++) {
 			if (i & 1) { // Large
-				if (m_data[parent(i)] < m_data[i]) throw std::logic_error("fuck");
+				if (m_data[parent(i)] < m_data[i])
+					throw std::logic_error("fuck");
 				//assert(!(m_data[parent(i)] < m_data[i]));
 			} else {
-				if (m_data[parent(i)] > m_data[i]) throw std::logic_error("fuck");
+				if (m_data[parent(i)] > m_data[i])
+					throw std::logic_error("fuck");
 				//assert(!(m_data[parent(i)] > m_data[i]));
 			}
 		}
 	}
 
 private:
-
 	inline static size_t left_child(size_t i) noexcept { return (i << 1) + 2 - (i & 1); }
+
 	inline static size_t right_child(size_t i) noexcept { return (i << 1) + 4 - (i & 1); }
+
 	inline static size_t parent(size_t i) noexcept { return i - (i >> 2 << 1) - 2; }
 
-	template<class Comp>
+	template <class Comp>
 	void _push_heap(size_t holeIndex, size_t parentIndex, const_reference value, Comp cmp) {
 		while (holeIndex > 1 && cmp(m_data[parentIndex], value)) {
 			m_data[holeIndex] = std::move(m_data[parentIndex]);
@@ -187,7 +198,7 @@ private:
 		m_data[holeIndex] = std::move(value);
 	}
 
-	template<class Comp>
+	template <class Comp>
 	void _adjust_heap(size_t holeIndex, value_type&& value, Comp cmp) {
 		size_t len = m_data.size();
 		size_t firstChild = left_child(holeIndex);
@@ -202,8 +213,8 @@ private:
 				}
 				holeIndex = firstChild;
 				firstChild = left_child(holeIndex);
-			} else break;
-
+			} else
+				break;
 		}
 		m_data[holeIndex] = std::move(value);
 		if ((holeIndex ^ 1) < len && cmp(m_data[holeIndex], m_data[holeIndex ^ 1])) {
@@ -211,7 +222,7 @@ private:
 		}
 	}
 
-	template<class Comp>
+	template <class Comp>
 	void _pop_heap(size_t topIndex, size_t resultIndex, Comp cmp) {
 		value_type value = std::move(m_data[resultIndex]);
 		m_data.pop_back();
@@ -251,3 +262,5 @@ private:
 private:
 	std::vector<value_type> m_data;
 };
+
+} // namespace qy

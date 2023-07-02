@@ -3,6 +3,8 @@
 #include <atomic>
 #include <future>
 
+namespace qy {
+
 /// @brief A special fstream using only 3 buffers for I/O.
 /// @tparam T Value type.
 template <class T>
@@ -168,3 +170,5 @@ private:
 	/// @brief Mark whether inpout eof.
 	std::atomic<bool> m_ieof;
 };
+
+} // namespace qy
