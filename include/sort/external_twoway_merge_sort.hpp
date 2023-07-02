@@ -1,11 +1,10 @@
 #pragma once
-#include "../common/base_sorter.hpp"
-#include "replacement_selection.hpp"
-#include "../common/fbufstream_iterator.hpp"
+#include "./base_sorter.hpp"
+#include "./replacement_selection.hpp"
+#include "bufio/fbufstream_iterator.hpp"
+#include "utils/futils.hpp"
 #include <algorithm>
 #include <queue>
-#include "../common/futils.hpp"
-
 
 /// @brief External twoway merge sort implementation.
 /// @tparam T Value type.

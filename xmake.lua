@@ -40,9 +40,13 @@ target("proj1-count_io")
 target("proj1-main")
     add_files("src/proj1/main.cpp")
 
-target("proj2")
-    add_files("src/proj2/*.cpp")
-    add_packages("fmt", "nlohmann_json")
+target("proj2-test_heap")
+    add_files("src/proj2/test_heap.cpp")
+
+target("proj2-test_sort")
+    add_files("src/proj2/test_sort.cpp")
+
+-- add_packages("fmt", "nlohmann_json")
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io

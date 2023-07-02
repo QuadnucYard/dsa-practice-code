@@ -1,6 +1,6 @@
 #pragma once
-#include "fbufstream.hpp"
-#include "json_log.hpp"
+#include "bufio/fbufstream.hpp"
+#include "utils/json_log.hpp"
 
 class base_sorter : public json_log {
 

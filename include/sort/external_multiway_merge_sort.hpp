@@ -1,7 +1,7 @@
 #pragma once
-#include "../common/base_sorter.hpp"
-#include "../proj4/replacement_selection.hpp"
-#include "../common/pooled_ifbufsteam.hpp"
+#include "./base_sorter.hpp"
+#include "./replacement_selection.hpp"
+#include "bufio/pooled_ifbufsteam.hpp"
 
 /// @brief External multi-way merge sort implementation.
 /// @tparam T Value type.

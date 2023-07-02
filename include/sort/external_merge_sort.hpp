@@ -1,6 +1,6 @@
 #pragma once
-#include "../common/base_sorter.hpp"
-#include "../common/fbufstream_iterator.hpp"
+#include "./base_sorter.hpp"
+#include "bufio/fbufstream_iterator.hpp"
 #include <algorithm>
 #include <cassert>
 

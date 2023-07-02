@@ -1,7 +1,7 @@
 #pragma once
-#include "../common/base_sorter.hpp"
-#include "../common/fbufstream.hpp"
-#include "../proj4/loser_tree.hpp"
+#include "./base_sorter.hpp"
+#include "bufio/fbufstream.hpp"
+#include "ds/loser_tree.hpp"
 #include <vector>
 
 /// @brief Replacement selection algorithm for external merge sort to produce better initial merge segments.

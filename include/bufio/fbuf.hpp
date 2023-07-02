@@ -1,26 +1,31 @@
 #pragma once
-#include <fstream>
+#include "utils/json_log.hpp"
 #include <filesystem>
+#include <fstream>
 #include <vector>
-#include "json_log.hpp"
 
 namespace fs = std::filesystem;
 
 struct basic_buffer_tag {};
+
 struct double_buffer_tag {};
 
-
-/// @brief Base buffer for stream. 
+/// @brief Base buffer for stream.
 /// @tparam T Value type.
 template <class T>
 class fbuf : public json_log {
-
 public:
 	using value_type = T;
 	using buffer_type = std::vector<value_type>;
 	constexpr static size_t value_size = sizeof(value_type);
 
-	fbuf(size_t buffer_size) : json_log(), buffer_size(buffer_size), m_buf(buffer_size), m_pos(0), m_first(0), m_spos(-1) {}
+	fbuf(size_t buffer_size) :
+		json_log(),
+		buffer_size(buffer_size),
+		m_buf(buffer_size),
+		m_pos(0),
+		m_first(0),
+		m_spos(-1) {}
 
 	virtual void close() { m_spos = -1; }
 

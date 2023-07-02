@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #ifdef LOGGING
 #include <json/json.h>
 

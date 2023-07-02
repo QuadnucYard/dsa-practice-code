@@ -1,16 +1,15 @@
 #pragma once
-#include "../common/base_sorter.hpp"
-#include <cassert>
+#include "./base_sorter.hpp"
+#include "bufio/arraybuf.hpp"
+#include "ds/interval_heap.hpp"
 #include <algorithm>
-#include "interval_heap.hpp"
-#include "arraybuf.hpp"
+#include <cassert>
 
 /// @brief External sorting implemented by quick sort
 /// @tparam T Value type of sorted file
 /// @tparam buffer_size Buffer size, aka number of buffer elements
 template <class T>
 class external_quick_sorter : public base_sorter {
-
 	using buffer_type = arraybuf<T>;
 
 	constexpr static size_t value_size = sizeof(T);
@@ -20,20 +19,31 @@ public:
 
 	/// @brief Constructor
 	/// @param tmp_path Path of temporary file.
-	external_quick_sorter(size_t buffer_size, size_t heap_size) : base_sorter(buffer_size), heap_size(heap_size),
-		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size, true) {}
+	external_quick_sorter(size_t buffer_size, size_t heap_size) :
+		base_sorter(buffer_size),
+		heap_size(heap_size),
+		input_buf(buffer_size),
+		small_buf(buffer_size),
+		large_buf(buffer_size, true) {}
 
-	external_quick_sorter(size_t buffer_size) : base_sorter(buffer_size, buffer_size),
-		input_buf(buffer_size), small_buf(buffer_size), large_buf(buffer_size, true) {}
+	external_quick_sorter(size_t buffer_size) :
+		base_sorter(buffer_size),
+		input_buf(buffer_size),
+		small_buf(buffer_size),
+		large_buf(buffer_size, true) {}
 
 	/// @brief Sort array in binary file.
 	/// @param input_path Path of input file.
 	/// @param output_path Path of output file.
 	void operator()(const fs::path& input_path, const fs::path& output_path) {
-		// Open file
+		// Open files
 		ftemp.open(output_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
 		finput.open(input_path, std::ios_base::binary | std::ios_base::in);
-		foutput.open(output_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out | std::ios_base::trunc);
+		foutput.open(output_path, std::ios_base::binary | std::ios_base::in | std::ios_base::out |
+									  std::ios_base::trunc);
+		assert(ftemp.is_open());
+		assert(finput.is_open());
+		assert(foutput.is_open());
 		// Get input size
 		size_t src_size = fs::file_size(input_path);
 		fs::resize_file(output_path, src_size);
@@ -57,7 +67,8 @@ public:
 
 private:
 	void _sort(size_t first, size_t last, bool initial = false) {
-		if (first >= last) return;
+		if (first >= last)
+			return;
 		// Fill middle group
 		size_t input_size = std::min(last - first, buffer_size);
 		input_buf.load(first, input_size);
@@ -132,7 +143,8 @@ private:
 		validate(first, mid1, mid2, last);
 #endif
 		// Rebind input buffer to output file after the first run
-		if (initial) input_buf.bind(&foutput);
+		if (initial)
+			input_buf.bind(&foutput);
 #ifdef LOGGING
 		m_log["rec"] = m_log["rec"].asInt() + 1;
 #endif
@@ -167,12 +179,11 @@ private:
 
 private:
 	size_t heap_size;
-	std::fstream finput; 				// Input file stream
-	std::fstream foutput; 				// Output file stream
-	std::fstream ftemp; 				// Temp file stream
-	interval_heap<T> middle_heap; 		// Heap (depq) for middle group 
-	buffer_type input_buf; 				// Buffer for input, bound input or output file
-	buffer_type small_buf; 				// Buffer for small, bound output file
-	buffer_type large_buf; 				// Buffer for large, bound temp file
-
+	std::fstream finput;		  // Input file stream
+	std::fstream foutput;		  // Output file stream
+	std::fstream ftemp;			  // Temp file stream
+	interval_heap<T> middle_heap; // Heap (depq) for middle group
+	buffer_type input_buf;		  // Buffer for input, bound input or output file
+	buffer_type small_buf;		  // Buffer for small, bound output file
+	buffer_type large_buf;		  // Buffer for large, bound temp file
 };
