@@ -46,6 +46,20 @@ target("proj2-test_heap")
 target("proj2-test_sort")
     add_files("src/proj2/test_sort.cpp")
 
+target("proj3-test_sort")
+    add_files("src/proj3/test_sort.cpp")
+
+target("proj4-test_loser")
+    add_files("src/proj4/test_loser_tree.cpp")
+
+target("proj4-test_sort")
+    add_files("src/proj4/test_sort.cpp")
+
+target("proj5-test_sort")
+    add_files("src/proj5/test_sort.cpp")
+
+
+
 -- add_packages("fmt", "nlohmann_json")
 
 --

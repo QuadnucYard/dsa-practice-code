@@ -1,10 +1,9 @@
 #pragma once
 #include "fbuf.hpp"
-#include <future>
 #include <atomic>
+#include <future>
 
-
-/// @brief A special fstream using only 3 buffers for I/O. 
+/// @brief A special fstream using only 3 buffers for I/O.
 /// @tparam T Value type.
 template <class T>
 class async_iofbufstream : public json_log {
@@ -14,18 +13,31 @@ public:
 	constexpr static size_t value_size = sizeof(value_type);
 
 	async_iofbufstream(size_t buffer_size) :
-		buffer_size(buffer_size), m_buf(buffer_size), m_ibuf(buffer_size), m_obuf(buffer_size), m_ipos(buffer_size),
-		m_opos(0), m_ispos(-1), m_isize(-1) {}
-	async_iofbufstream(size_t buffer_size, const fs::path& input_path, const fs::path& output_path) : async_iofbufstream(buffer_size) {
+		buffer_size(buffer_size),
+		m_ipos(buffer_size),
+		m_opos(0),
+		m_ispos(-1),
+		m_isize(-1),
+		m_buf(buffer_size),
+		m_ibuf(buffer_size),
+		m_obuf(buffer_size) {}
+
+	async_iofbufstream(size_t buffer_size, const fs::path& input_path,
+					   const fs::path& output_path) :
+		async_iofbufstream(buffer_size) {
 		open(input_path, output_path);
 	}
+
 	~async_iofbufstream() { close(); }
 
 #ifdef LOGGING
-	void clear_log() override { this->m_log["in"] = 0; this->m_log["out"] = 0; }
+	void clear_log() override {
+		this->m_log["in"] = 0;
+		this->m_log["out"] = 0;
+	}
 #endif
 
-	/// @brief Opens external input file and output file. It will immediately load the first block synchronously. 
+	/// @brief Opens external input file and output file. It will immediately load the first block synchronously.
 	/// @param input_path Path of input file.
 	/// @param output_path Path of output file.
 	void open(const fs::path& input_path, const fs::path& output_path) {
@@ -33,12 +45,14 @@ public:
 		m_ostream.open(output_path, std::ios_base::binary);
 		m_ispos = m_isize = 0;
 		load();
-		if (!m_istream.eof()) aload();
+		if (!m_istream.eof())
+			aload();
 	}
 
 	/// @brief Close the stream.
 	void close() {
-		if (m_ofut.valid()) m_ofut.get();
+		if (m_ofut.valid())
+			m_ofut.get();
 		dump();
 		m_istream.close();
 		m_ostream.close();
@@ -47,7 +61,7 @@ public:
 	/// @brief Check whether encounters end of input file.
 	bool ieof() const { return m_ieof && m_ispos == m_isize; }
 
-	inline self& operator>> (value_type& x) {
+	inline self& operator>>(value_type& x) {
 		if (m_ipos == buffer_size) {
 			swap_ibuffer();
 			aload();
@@ -57,7 +71,7 @@ public:
 		return *this;
 	}
 
-	inline self& operator<< (const value_type& x) {
+	inline self& operator<<(const value_type& x) {
 		m_buf[m_opos++] = x;
 		if (m_opos == buffer_size) {
 			swap_obuffer();
@@ -67,7 +81,6 @@ public:
 	}
 
 private:
-
 	/// @brief Load data from file to buffer.
 	inline virtual void load() {
 		m_istream.read(reinterpret_cast<char*>(m_buf.data()), m_buf.size() * value_size);
@@ -82,10 +95,11 @@ private:
 	/// @brief Load data to background buffer.
 	inline void aload() {
 		m_ifut = std::async(std::launch::async, [this]() {
-			this->m_istream.read(reinterpret_cast<char*>(this->m_ibuf.data()), this->m_ibuf.size() * this->value_size);
+			this->m_istream.read(reinterpret_cast<char*>(this->m_ibuf.data()),
+								 this->m_ibuf.size() * this->value_size);
 			this->m_isize += this->m_istream.gcount() / value_size;
 			this->m_ieof = this->m_istream.eof();
-			});
+		});
 #ifdef LOGGING
 		Json::inc(this->m_log, "in");
 #endif
@@ -110,8 +124,9 @@ private:
 	/// @brief Launch async dump.
 	inline void adump() {
 		m_ofut = std::async(std::launch::async, [this]() {
-			this->m_ostream.write(reinterpret_cast<char*>(this->m_obuf.data()), this->m_obuf.size() * this->value_size);
-			});
+			this->m_ostream.write(reinterpret_cast<char*>(this->m_obuf.data()),
+								  this->m_obuf.size() * this->value_size);
+		});
 #ifdef LOGGING
 		Json::inc(this->m_log, "out");
 #endif
@@ -119,13 +134,13 @@ private:
 
 	/// @brief Swap main buffer with output buffer.
 	inline void swap_obuffer() {
-		if (m_ofut.valid()) m_ofut.get();
+		if (m_ofut.valid())
+			m_ofut.get();
 		std::swap(m_buf, m_obuf);
 		m_opos = 0;
 	}
 
 private:
-
 	/// @brief Buffer size.
 	size_t buffer_size;
 	/// @brief Pointer to input data
