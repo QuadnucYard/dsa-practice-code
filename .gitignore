@@ -163,6 +163,7 @@ cython_debug/
 **/data
 **/out
 .vscode
+output
 
 *.exe
 
@@ -170,7 +171,5 @@ cython_debug/
 # Xmake cache
 .xmake/
 build/
-
-.vscode
 
 vsxmake*/

@@ -18,7 +18,7 @@ add_rules("mode.debug", "mode.release")
 add_requires("fmt")
 add_requires("nlohmann_json")
 
-add_includedirs("common")
+add_includedirs("include")
 
 set_rundir("output")
 before_run(function () 
@@ -34,8 +34,14 @@ function add_test_target(...)
     end
 end
 
-target("proj1")
-    add_files("proj1/*.cpp")
+target("proj1-count_io")
+    add_files("src/proj1/count_io.cpp")
+
+target("proj1-main")
+    add_files("src/proj1/main.cpp")
+
+target("proj2")
+    add_files("src/proj2/*.cpp")
     add_packages("fmt", "nlohmann_json")
 
 --
