@@ -12,7 +12,7 @@ public:
 	using value_type = T;
 	using base = fbuf<T>;
 
-	base_ofbufstream(size_t buffer_size) : base(buffer_size) {}
+	base_ofbufstream(size_t buffer_size) : base(buffer_size) { clear_log(); }
 
 	base_ofbufstream(size_t buffer_size, const std::filesystem::path& path) :
 		base_ofbufstream(buffer_size) {
@@ -22,7 +22,7 @@ public:
 	~base_ofbufstream() { close(); }
 
 #ifdef LOGGING
-	void clear_log() override { this->m_log["out"] = 0; }
+	void clear_log() { this->m_log["out"] = 0; }
 #endif
 
 	/// @brief Opens an external file.
@@ -33,7 +33,7 @@ public:
 	}
 
 	/// @brief Close the file.
-	virtual void close() {
+	void close() {
 		dump();
 		m_stream.close();
 	}
@@ -66,7 +66,7 @@ protected:
 		m_stream.write(reinterpret_cast<char*>(this->m_buf.data()), this->m_pos * this->value_size);
 		this->m_pos = 0;
 #ifdef LOGGING
-		Json::inc(this->m_log, "out");
+		this->jinc("out");
 #endif
 	}
 
@@ -108,7 +108,7 @@ public:
 	async_ofbufstream(size_t buffer_size, const std::filesystem::path& path) :
 		base(buffer_size, path), m_buf2(buffer_size) {}
 
-	void close() override {
+	void close() {
 		if (m_bufuture.valid())
 			m_bufuture.get();
 		base::close();
@@ -131,7 +131,7 @@ private:
 								 this->m_buf2.size() * this->value_size);
 		});
 #ifdef LOGGING
-		Json::inc(this->m_log, "out");
+		this->jinc("out");
 #endif
 	}
 

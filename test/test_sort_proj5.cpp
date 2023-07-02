@@ -1,11 +1,13 @@
-#pragma GCC optimize(3)
-#pragma GCC optimize("Ofast", "inline", "-ffast-math")
-#pragma GCC target("avx,sse2,sse3,sse4,mmx")
+// #pragma GCC optimize(3)
+// #pragma GCC optimize("Ofast", "inline", "-ffast-math")
+// #pragma GCC target("avx,sse2,sse3,sse4,mmx")
 // #define DEBUG
 #define LOGGING
-#include <iostream>
-#include "judge.hpp"
-#include "../proj5/external_multiway_merge_sort.hpp"
+#include "sort/external_multiway_merge_sort.hpp"
+#include "utils/judge.hpp"
+
+
+using namespace qy;
 
 struct judge_impl {
 	judge J;

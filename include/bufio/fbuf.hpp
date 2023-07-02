@@ -22,14 +22,9 @@ public:
 	constexpr static size_t value_size = sizeof(value_type);
 
 	fbuf(size_t buffer_size) :
-		json_log(),
-		buffer_size(buffer_size),
-		m_pos(0),
-		m_first(0),
-		m_spos(-1),
-		m_buf(buffer_size) {}
+		buffer_size(buffer_size), m_pos(0), m_first(0), m_spos(-1), m_buf(buffer_size) {}
 
-	virtual void close() { m_spos = -1; }
+	void close() { m_spos = -1; }
 
 protected:
 	/// @brief Buffer size.

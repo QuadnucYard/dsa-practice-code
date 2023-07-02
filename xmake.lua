@@ -16,6 +16,7 @@ add_rules("mode.debug", "mode.release")
 -- add_rules("c++.unity_build")
 
 add_requires("fmt")
+add_requires("nameof")
 add_requires("nlohmann_json")
 
 add_includedirs("include")
@@ -27,9 +28,9 @@ end)
 
 function add_test_target(...)
     for _, name in ipairs{...} do
-        target("test_" .. name, function () 
+        target("test-" .. name, function () 
             add_files("test/test_" .. name .. ".cpp")
-            add_packages("fmt")
+            add_packages("fmt", "nameof", "nlohmann_json")
         end)
     end
 end
@@ -58,9 +59,10 @@ target("proj4-test_sort")
 target("proj5-test_sort")
     add_files("src/proj5/test_sort.cpp")
 
+target("test-gen_data")
+    add_files("test/gen_data.cpp")
 
-
--- add_packages("fmt", "nlohmann_json")
+add_test_target("sort_proj2", "sort_proj3", "sort_proj4", "sort_proj5", "sort_all")
 
 --
 -- If you want to known more usage about xmake, please see https://xmake.io

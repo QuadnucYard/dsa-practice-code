@@ -53,17 +53,20 @@ public:
 		input_buf.bind(&finput);
 		small_buf.bind(&foutput);
 		large_buf.bind(&ftemp);
+#ifdef LOGGING
+		clear_log();
+		m_log["rec"] = 0;
+		m_log["heap_size"] = heap_size;
+#endif
 		// Perform sorting
 		_sort(0, src_size / value_size, true);
 		// End with closing stream
 		finput.close();
 		foutput.close();
 #ifdef LOGGING
-		m_log["rec"] = 0;
 		m_log["input"] = input_buf.get_log();
 		m_log["small"] = small_buf.get_log();
 		m_log["large"] = large_buf.get_log();
-		m_log["heap_size"] = heap_size;
 #endif
 	}
 
@@ -148,7 +151,7 @@ private:
 		if (initial)
 			input_buf.bind(&foutput);
 #ifdef LOGGING
-		m_log["rec"] = m_log["rec"].asInt() + 1;
+		this->jinc("rec");
 #endif
 		_sort(first, mid1);
 		_sort(mid2, last);

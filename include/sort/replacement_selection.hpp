@@ -66,7 +66,7 @@ public:
 #ifdef LOGGING
 		m_log["loser_size"] = loser_size;
 		m_log["io"] = iobuf.get_log();
-		Json::set_vector(m_log, "seg", seg);
+		m_log["seg"] = seg;
 #endif
 		return seg;
 	}

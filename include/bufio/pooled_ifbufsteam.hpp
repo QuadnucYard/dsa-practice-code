@@ -83,7 +83,7 @@ public:
 		m_bufs(buffer_count, stream_type{buffer_size}) {
 #ifdef LOGGING
 		m_log["buffer_size"] = buffer_size;
-		m_log["app"].resize(0);
+		m_log["app"].clear();
 #endif
 	}
 
@@ -134,7 +134,7 @@ public:
 				p->m_stream.read(reinterpret_cast<char*>(loading_buf.data()), siz * p->value_size);
 			});
 #ifdef LOGGING
-			m_log["app"].append(p - m_bufs.begin());
+			m_log["app"].push_back(p - m_bufs.begin());
 #endif
 		}
 	}

@@ -22,7 +22,9 @@ public:
 		m_isize(-1),
 		m_buf(buffer_size),
 		m_ibuf(buffer_size),
-		m_obuf(buffer_size) {}
+		m_obuf(buffer_size) {
+		clear_log();
+	}
 
 	async_iofbufstream(size_t buffer_size, const fs::path& input_path,
 					   const fs::path& output_path) :
@@ -33,7 +35,7 @@ public:
 	~async_iofbufstream() { close(); }
 
 #ifdef LOGGING
-	void clear_log() override {
+	void clear_log() {
 		this->m_log["in"] = 0;
 		this->m_log["out"] = 0;
 	}
@@ -90,7 +92,7 @@ private:
 		m_isize += m_istream.gcount() / value_size;
 		m_ieof = m_istream.eof();
 #ifdef LOGGING
-		Json::inc(this->m_log, "in");
+		jinc("in");
 #endif
 	}
 
@@ -103,7 +105,7 @@ private:
 			this->m_ieof = this->m_istream.eof();
 		});
 #ifdef LOGGING
-		Json::inc(this->m_log, "in");
+		jinc("in");
 #endif
 	}
 
@@ -119,7 +121,7 @@ private:
 		m_ostream.write(reinterpret_cast<char*>(m_buf.data()), m_opos * value_size);
 		m_opos = 0;
 #ifdef LOGGING
-		Json::inc(this->m_log, "out");
+		jinc("out");
 #endif
 	}
 
@@ -130,7 +132,7 @@ private:
 								  this->m_obuf.size() * this->value_size);
 		});
 #ifdef LOGGING
-		Json::inc(this->m_log, "out");
+		jinc("out");
 #endif
 	}
 

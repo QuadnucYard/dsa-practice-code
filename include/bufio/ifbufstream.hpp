@@ -13,7 +13,7 @@ public:
 	using base = fbuf<T>;
 	using base::buffer_type;
 
-	base_ifbufstream(size_t buffer_size) : base(buffer_size) {}
+	base_ifbufstream(size_t buffer_size) : base(buffer_size) { clear_log(); }
 
 	base_ifbufstream(size_t buffer_size, const std::filesystem::path& path) :
 		base_ifbufstream(buffer_size) {
@@ -25,7 +25,7 @@ public:
 	~base_ifbufstream() { close(); }
 
 #ifdef LOGGING
-	void clear_log() override { this->m_log["in"] = 0; }
+	void clear_log() { this->m_log["in"] = 0; }
 #endif
 
 	/// @brief Opens an external file.
@@ -41,7 +41,7 @@ public:
 	}
 
 	/// @brief Close the file.
-	void close() override {
+	void close() {
 		base::close();
 		m_stream.close();
 	}
@@ -106,7 +106,7 @@ protected:
 					  this->m_buf.size() * this->value_size);
 		this->m_pos = 0;
 #ifdef LOGGING
-		Json::inc(this->m_log, "in");
+		this->jinc("in");
 #endif
 	}
 
@@ -186,7 +186,7 @@ private:
 								this->m_buf2.size() * this->value_size);
 		});
 #ifdef LOGGING
-		Json::inc(this->m_log, "in");
+		this->jinc("in");
 #endif
 	}
 

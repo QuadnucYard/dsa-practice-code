@@ -68,7 +68,7 @@ public:
 		m_stream->seekp(tmp_pos); // Recover write pos
 		m_size = input_size;
 #ifdef LOGGING
-		Json::inc(m_log, "in");
+		jinc("in");
 #endif
 	}
 
@@ -85,7 +85,7 @@ public:
 		// m_stream->flush();
 		m_size = 0;
 #ifdef LOGGING
-		Json::inc(m_log, "out");
+		jinc("out");
 #endif
 	}
 
