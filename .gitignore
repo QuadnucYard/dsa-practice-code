@@ -165,3 +165,12 @@ cython_debug/
 .vscode
 
 *.exe
+
+
+# Xmake cache
+.xmake/
+build/
+
+.vscode
+
+vsxmake*/
