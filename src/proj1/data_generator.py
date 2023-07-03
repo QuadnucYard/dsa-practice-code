@@ -22,6 +22,6 @@ matA = gen(n, k)
 matB = gen(k, m)
 matC = matA @ matB
 
-save(matA, "proj1/data/matA.in")
-save(matB, "proj1/data/matB.in")
-save(matC, "proj1/data/matC.ans")
+save(matA, "output/proj1/data/matA.in")
+save(matB, "output/proj1/data/matB.in")
+save(matC, "output/proj1/data/matC.ans")

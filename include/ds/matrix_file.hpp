@@ -1,10 +1,17 @@
 #pragma once
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 
+#define CFILE
+#include "bufio/unique_file.hpp"
+
 namespace qy {
+
+namespace fs = std::filesystem;
 
 /*
 We use a code to determine loop order:
@@ -27,12 +34,18 @@ kji 5
  * @tparam cache_size Size of cache line in bytes.
  */
 template <class T = int, size_t cache_size = 4096>
+	requires requires(T a, T b, T c) {
+				 requires cache_size % sizeof(T) == 0; // To ensure memory alignment.
+				 a += b * c;
+			 }
 class matrix_file {
-	static_assert(cache_size % sizeof(T) == 0); // To ensure memory alignment.
+	using header_size_t = uint32_t;
 
-private:
-	static const size_t header_size = sizeof(int) * 2;		 // Size of header(rows, cols) in bytes
-	static const size_t block_size = cache_size / sizeof(T); // Number of elements in cache line
+	// Size of header(rows, cols) in bytes
+	static constexpr size_t header_size = sizeof(header_size_t) * 2;
+
+	// Number of elements in cache line
+	static constexpr size_t block_size = cache_size / sizeof(T);
 
 public:
 	/**
@@ -41,14 +54,12 @@ public:
 	 * @param path File of matrix.
 	 * @param cache_size Size of cache line in bytes.
 	 */
-	matrix_file(const std::filesystem::path& path) : m_path(path) {
-		m_file.open(path, std::ios_base::binary | std::ios::in | std::ios::out | std::ios::app);
-		assert(!m_file.bad());
-		uint32_t tmp_rows, tmp_cols;
-		m_file.read(reinterpret_cast<char*>(&tmp_rows), sizeof(uint32_t));
-		m_file.read(reinterpret_cast<char*>(&tmp_cols), sizeof(uint32_t));
-		m_rows = tmp_rows;
-		m_cols = tmp_cols;
+	matrix_file(const fs::path& path) : m_path(path) {
+		m_file.open(path, false);
+		header_size_t tmp[2];
+		m_file.read_at(tmp, 0);
+		m_rows = tmp[0];
+		m_cols = tmp[1];
 		m_blocks = (m_rows * m_cols + block_size - 1) / block_size;
 		m_dirty = false;
 		count_in = count_out = 0;
@@ -63,13 +74,12 @@ public:
 	 * @param cols Number of columns
 	 * @param cache_size Size of cache line in bytes.
 	 */
-	matrix_file(std::filesystem::path path, size_t rows, size_t cols) :
+	matrix_file(const fs::path& path, size_t rows, size_t cols) :
 		m_path(path), m_rows(rows), m_cols(cols) {
-		m_file.open(path, std::ios_base::binary | std::ios::in | std::ios::out | std::ios::trunc);
-		assert(!m_file.bad());
-		m_file.seekp(0);
-		m_file.write(reinterpret_cast<char*>(&m_rows), sizeof(uint32_t));
-		m_file.write(reinterpret_cast<char*>(&m_cols), sizeof(uint32_t));
+		m_file.open(path, true);
+		// assert(!m_file.bad());
+		m_file.write_at(m_rows, 0);
+		m_file.write_at(m_cols, sizeof(header_size_t));
 		m_blocks = (m_rows * m_cols + block_size - 1) / block_size;
 		fill(0);
 		count_in = count_out = 0;
@@ -78,9 +88,8 @@ public:
 	matrix_file(const matrix_file& other) = delete;
 
 	~matrix_file() {
-		if (m_dirty) {
+		if (m_dirty)
 			store_block();
-		}
 		m_file.close();
 	}
 
@@ -105,7 +114,7 @@ public:
 	 * @param c
 	 * @return const T This element
 	 */
-	const T operator[](size_t r, size_t c) const {
+	inline const T operator[](size_t r, size_t c) const {
 		load_block_on_demand(r, c);
 		return m_cacheline[(r * m_cols + c) % block_size];
 	}
@@ -117,7 +126,7 @@ public:
 	 * @param c
 	 * @return const T This element
 	 */
-	T& operator[](size_t r, size_t c) {
+	inline T& operator[](size_t r, size_t c) {
 		load_block_on_demand(r, c);
 		m_dirty = true;
 		return m_cacheline[(r * m_cols + c) % block_size];
@@ -143,7 +152,7 @@ public:
 	 * @param val Value to fill.
 	 */
 	void fill(const T& val) {
-		std::fill_n(m_cacheline, block_size, val);
+		std::ranges::fill(m_cacheline, val);
 		for (size_t i = 0; i < m_blocks; i++) {
 			m_current_block = i;
 			store_block();
@@ -209,11 +218,9 @@ private:
 	 *
 	 * @param b Index of block.
 	 */
-	void load_block_on_demand(size_t r, size_t c) const {
-		size_t b = get_block(r, c);
-		if (b != m_current_block) {
+	inline void load_block_on_demand(size_t r, size_t c) const {
+		if (size_t b = get_block(r, c); b != m_current_block)
 			load_block(b);
-		}
 	}
 
 	/**
@@ -221,12 +228,11 @@ private:
 	 *
 	 * @param b Index of block.
 	 */
-	void load_block(size_t b) const {
+	inline void load_block(size_t b) const {
 		if (m_dirty)
 			store_block();
 #ifndef NO_IO
-		m_file.seekg(header_size + cache_size * b);
-		m_file.read(reinterpret_cast<char*>(const_cast<T*>(m_cacheline)), cache_size);
+		m_file.read_at(m_cacheline, header_size + cache_size * b);
 #endif
 		m_current_block = b;
 		count_in++;
@@ -237,14 +243,12 @@ public:
 	 * @brief Store active block to disk.
 	 *
 	 */
-	void store_block() const {
+	inline void store_block() const {
 #ifndef NO_IO
-		size_t n = cache_size;
-		if (m_current_block == m_blocks - 1) {
-			n = m_rows * m_cols * sizeof(T) - m_current_block * cache_size;
-		}
-		m_file.seekp(header_size + cache_size * m_current_block);
-		m_file.write(reinterpret_cast<const char*>(m_cacheline), n);
+		size_t n = block_size;
+		if (m_current_block == m_blocks - 1)
+			n = m_rows * m_cols - m_current_block * block_size;
+		m_file.write_at(m_cacheline, n, header_size + cache_size * m_current_block);
 #endif
 		m_dirty = false;
 		count_out++;
@@ -258,13 +262,13 @@ public:
 
 private:
 	std::filesystem::path m_path;	// Path of this matrix file
-	mutable std::fstream m_file;	// Opened file of this matrix
+	mutable unique_file m_file;		// Opened file of this matrix
 	mutable size_t m_current_block; // Index of current block
 	mutable bool m_dirty;			// Whether cache line is dirty
 	size_t m_rows;					// Number of rows
 	size_t m_cols;					// Number of columns
 	size_t m_blocks;				// Number of blocks
-	T m_cacheline[block_size];		// Block of cache
+	mutable std::array<T, block_size> m_cacheline; // Block of cache
 };
 
 /**

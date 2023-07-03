@@ -1,1 +1,1 @@
-python proj1/data_generator.py 1024 512 256
+python src/proj1/data_generator.py 1024 512 256
