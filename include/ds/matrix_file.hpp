@@ -2,42 +2,27 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 
 #define CFILE
 #include "bufio/unique_file.hpp"
 
 namespace qy {
 
-namespace fs = std::filesystem;
+template <class T, size_t S>
+concept memory_aligned = requires { S % sizeof(T) == 0; };
 
-/*
-We use a code to determine loop order:
-ijk 0
-ikj 1
-jik 2
-jki 3
-kij 4
-kji 5
-*/
-#ifndef MATMUL_ORDER
-	#define MATMUL_ORDER 1
-#endif
+template <class T>
+concept matrix_multiplicable = requires(T a, T b, T c) { a += b * c; };
 
 /**
  * @brief A matrix with cache on disk.
- * BUG: It fails to compile when cache_size differs.
  *
  * @tparam T Type of elements in the matrix.
  * @tparam cache_size Size of cache line in bytes.
  */
 template <class T = int, size_t cache_size = 4096>
-	requires requires(T a, T b, T c) {
-				 requires cache_size % sizeof(T) == 0; // To ensure memory alignment.
-				 a += b * c;
-			 }
+	requires matrix_multiplicable<T> && memory_aligned<T, cache_size>
+
 class matrix_file {
 	using header_size_t = uint32_t;
 
@@ -57,7 +42,7 @@ public:
 	matrix_file(const fs::path& path) : m_path(path) {
 		m_file.open(path, false);
 		header_size_t tmp[2];
-		m_file.read_at(tmp, 0);
+		m_file.read_at(tmp, m_file.file_size() - header_size);
 		m_rows = tmp[0];
 		m_cols = tmp[1];
 		m_blocks = (m_rows * m_cols + block_size - 1) / block_size;
@@ -132,19 +117,8 @@ public:
 		return m_cacheline[(r * m_cols + c) % block_size];
 	}
 
-	template <size_t S1, size_t S2>
-	friend bool operator==(const matrix_file<T, S1>& lhs, const matrix_file<T, S2>& rhs) {
-		if (lhs.rows() != rhs.rows() || lhs.cols() != rhs.cols())
-			return false;
-		size_t n = lhs.rows(), m = lhs.cols();
-		for (size_t i = 0; i < n; i++) {
-			for (size_t j = 0; j < m; j++) {
-				if (lhs[i, j] != rhs[i, j])
-					return false;
-			}
-		}
-		return true;
-	}
+	template <class U, size_t S1, size_t S2>
+	friend bool operator==(const matrix_file<U, S1>& lhs, const matrix_file<U, S2>& rhs);
 
 	/**
 	 * @brief Fill matrix with value.
@@ -165,42 +139,31 @@ public:
 	 * @param lhs
 	 * @param rhs
 	 */
-	template <size_t S1, size_t S2>
+	template <int order, size_t S1, size_t S2>
+		requires requires { 0 <= order&& order < 6; }
 	void matmul(const matrix_file<T, S1>& lhs, const matrix_file<T, S2>& rhs) {
-#if MATMUL_ORDER == 0 || MATMUL_ORDER == 1
-	#define I i
-#elif MATMUL_ORDER == 2 || MATMUL_ORDER == 3
-	#define I j
-#elif MATMUL_ORDER == 4 || MATMUL_ORDER == 5
-	#define I k
-#endif
-#if MATMUL_ORDER == 2 || MATMUL_ORDER == 4
-	#define J i
-#elif MATMUL_ORDER == 0 || MATMUL_ORDER == 5
-	#define J j
-#elif MATMUL_ORDER == 1 || MATMUL_ORDER == 3
-	#define J k
-#endif
-#if MATMUL_ORDER == 3 || MATMUL_ORDER == 5
-	#define K i
-#elif MATMUL_ORDER == 1 || MATMUL_ORDER == 4
-	#define K j
-#elif MATMUL_ORDER == 0 || MATMUL_ORDER == 2
-	#define K k
-#endif
+		assert(lhs.cols() == rhs.rows());
 		size_t n = lhs.rows(), p = lhs.cols(), m = rhs.cols();
 		fill(0);
-		for (size_t I = 0; I < n; I++) {
-			for (size_t J = 0; J < p; J++) {
-				for (size_t K = 0; K < m; K++) {
+#define CASE(o, I, J, K)                                                                           \
+	if constexpr (order == o)                                                                      \
+		for (size_t I = 0; I < n; I++)                                                             \
+			for (size_t J = 0; J < p; J++)                                                         \
+				for (size_t K = 0; K < m; K++)                                                     \
 					(*this)[i, j] += lhs[i, k] * rhs[k, j];
-				}
-			}
-		}
+		CASE(0, i, j, k);
+		CASE(1, i, k, j);
+		CASE(2, j, i, k);
+		CASE(3, j, k, i);
+		CASE(4, k, i, j);
+		CASE(5, k, j, i);
+#undef CASE
 		store_block();
-#undef I
-#undef J
-#undef K
+	}
+
+	template <size_t S1, size_t S2>
+	void matmul(const matrix_file<T, S1>& lhs, const matrix_file<T, S2>& rhs) {
+		matmul<1, S1, S2>(lhs, rhs);
 	}
 
 private:
@@ -232,7 +195,7 @@ private:
 		if (m_dirty)
 			store_block();
 #ifndef NO_IO
-		m_file.read_at(m_cacheline, header_size + cache_size * b);
+		m_file.read_at(m_cacheline, cache_size * b);
 #endif
 		m_current_block = b;
 		count_in++;
@@ -248,7 +211,7 @@ public:
 		size_t n = block_size;
 		if (m_current_block == m_blocks - 1)
 			n = m_rows * m_cols - m_current_block * block_size;
-		m_file.write_at(m_cacheline, n, header_size + cache_size * m_current_block);
+		m_file.write_at(m_cacheline, n, cache_size * m_current_block);
 #endif
 		m_dirty = false;
 		count_out++;
@@ -261,15 +224,29 @@ public:
 	mutable size_t count_out;
 
 private:
-	std::filesystem::path m_path;	// Path of this matrix file
-	mutable unique_file m_file;		// Opened file of this matrix
-	mutable size_t m_current_block; // Index of current block
-	mutable bool m_dirty;			// Whether cache line is dirty
-	size_t m_rows;					// Number of rows
-	size_t m_cols;					// Number of columns
-	size_t m_blocks;				// Number of blocks
+	std::filesystem::path m_path;				   // Path of this matrix file
+	mutable unique_file m_file;					   // Opened file of this matrix
+	mutable size_t m_current_block;				   // Index of current block
+	mutable bool m_dirty;						   // Whether cache line is dirty
+	size_t m_rows;								   // Number of rows
+	size_t m_cols;								   // Number of columns
+	size_t m_blocks;							   // Number of blocks
 	mutable std::array<T, block_size> m_cacheline; // Block of cache
 };
+
+template <class T, size_t S1, size_t S2>
+bool operator==(const matrix_file<T, S1>& lhs, const matrix_file<T, S2>& rhs) {
+	if (lhs.rows() != rhs.rows() || lhs.cols() != rhs.cols())
+		return false;
+	size_t n = lhs.rows(), m = lhs.cols();
+	for (size_t i = 0; i < n; i++) {
+		for (size_t j = 0; j < m; j++) {
+			if (lhs[i, j] != rhs[i, j])
+				return false;
+		}
+	}
+	return true;
+}
 
 /**
  * @brief Stringify the matrix file with display style.

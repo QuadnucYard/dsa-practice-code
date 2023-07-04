@@ -14,8 +14,8 @@ def gen(n, m) -> np.ndarray:
 def save(mat: np.ndarray, path: str) -> None:
     with open(path, "wb") as fout:
         print(mat.shape)
-        fout.write(struct.pack("2I", *mat.shape))
         fout.write(struct.pack(f"{mat.size}i", *mat.reshape(-1)))
+        fout.write(struct.pack("2I", *mat.shape))
 
 
 matA = gen(n, k)
