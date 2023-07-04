@@ -161,6 +161,15 @@ cython_debug/
 
 
 **/data
+**/out
 .vscode
+output
 
 *.exe
+
+
+# Xmake cache
+.xmake/
+build/
+
+vsxmake*/
